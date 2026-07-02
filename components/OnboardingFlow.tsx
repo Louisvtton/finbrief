@@ -117,10 +117,12 @@ export default function OnboardingFlow({ userId, product = 'digest', isAdding = 
 
   // Reader state
   const [readerTopics, setReaderTopics] = useState<string[]>([])
+  const [customTopic, setCustomTopic] = useState('')
   const [readerFeeds, setReaderFeeds] = useState<{ label: string; url: string }[]>([])
   const [feedUrl, setFeedUrl] = useState('')
   const [feedLabel, setFeedLabel] = useState('')
   const [feedError, setFeedError] = useState('')
+  const [guideInputs, setGuideInputs] = useState<Record<string, string>>({})
   const [readerAbout, setReaderAbout] = useState('')
   const [readerFreq, setReaderFreq] = useState('daily')
   const [showGuide, setShowGuide] = useState<string | null>(null)
@@ -302,6 +304,37 @@ export default function OnboardingFlow({ userId, product = 'digest', isAdding = 
                 <Chip key={topic} label={topic} selected={readerTopics.includes(topic)}
                   onClick={() => setReaderTopics(prev => prev.includes(topic) ? prev.filter(t => t !== topic) : [...prev, topic])} />
               ))}
+              {/* Custom topics */}
+              {readerTopics.filter(t => !READER_TOPICS.includes(t)).map(t => (
+                <div key={t} className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm border"
+                  style={{ backgroundColor: col, borderColor: col, color: '#fff' }}>
+                  <span>{t}</span>
+                  <button onClick={() => setReaderTopics(prev => prev.filter(x => x !== t))} className="opacity-70 hover:opacity-100 leading-none">✕</button>
+                </div>
+              ))}
+            </div>
+            {/* Add custom topic */}
+            <div className="flex gap-2">
+              <input
+                value={customTopic}
+                onChange={e => setCustomTopic(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && customTopic.trim()) {
+                    setReaderTopics(prev => [...prev, customTopic.trim()])
+                    setCustomTopic('')
+                  }
+                }}
+                placeholder="Add your own topic (e.g. French equities, Biotech, Fintech…)"
+                className="flex-1 rounded-xl px-4 py-3 text-sm text-white focus:outline-none"
+                style={{ backgroundColor: '#111', border: '1px solid #222' }}
+              />
+              <button
+                onClick={() => { if (customTopic.trim()) { setReaderTopics(prev => [...prev, customTopic.trim()]); setCustomTopic('') } }}
+                className="px-5 py-3 rounded-xl text-sm text-white font-semibold"
+                style={{ backgroundColor: col }}
+              >
+                Add
+              </button>
             </div>
             <div className="flex gap-3">
               <Btn secondary onClick={() => setStep(0)}>Back</Btn>
@@ -320,26 +353,60 @@ export default function OnboardingFlow({ userId, product = 'digest', isAdding = 
 
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-2">Find your RSS link</p>
-              {RSS_GUIDES.map(guide => (
-                <div key={guide.name}>
-                  <button
-                    onClick={() => setShowGuide(showGuide === guide.name ? null : guide.name)}
-                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-left text-sm font-medium transition-colors"
-                    style={{ backgroundColor: '#111', border: '1px solid #222', color: '#ccc' }}
-                  >
-                    <span>{guide.name}</span>
-                    <span className="text-xs text-zinc-500">{showGuide === guide.name ? 'Hide' : 'Show guide'}</span>
-                  </button>
-                  {showGuide === guide.name && (
-                    <div className="mx-1 mt-1 mb-2 px-4 py-3 rounded-xl text-xs text-zinc-400 leading-relaxed" style={{ backgroundColor: '#111', border: '1px solid #1A1A1A' }}>
-                      <p className="mb-2">{guide.instructions}</p>
-                      <a href={guide.url} target="_blank" rel="noopener noreferrer" className="font-semibold" style={{ color: col }}>
-                        Open {guide.name} page
-                      </a>
-                    </div>
-                  )}
-                </div>
-              ))}
+              {RSS_GUIDES.map(guide => {
+                const alreadyAdded = readerFeeds.some(f => f.label === guide.name)
+                return (
+                  <div key={guide.name}>
+                    <button
+                      onClick={() => setShowGuide(showGuide === guide.name ? null : guide.name)}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-left text-sm font-medium transition-colors"
+                      style={{ backgroundColor: '#111', border: `1px solid ${alreadyAdded ? col + '44' : '#222'}`, color: '#ccc' }}
+                    >
+                      <div className="flex items-center gap-2">
+                        {alreadyAdded && <span className="text-xs font-bold" style={{ color: col }}>✓</span>}
+                        <span>{guide.name}</span>
+                      </div>
+                      <span className="text-xs text-zinc-500">{showGuide === guide.name ? 'Hide' : alreadyAdded ? 'Added' : 'Connect'}</span>
+                    </button>
+                    {showGuide === guide.name && (
+                      <div className="mx-1 mt-1 mb-2 px-4 py-4 rounded-xl space-y-3" style={{ backgroundColor: '#0D0D0D', border: '1px solid #1A1A1A' }}>
+                        <p className="text-xs text-zinc-400 leading-relaxed">{guide.instructions}</p>
+                        <a href={guide.url} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold" style={{ color: col }}>
+                          Open {guide.name} page →
+                        </a>
+                        <div className="pt-1">
+                          <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-2">Paste your RSS URL</p>
+                          <div className="flex gap-2">
+                            <input
+                              value={guideInputs[guide.name] ?? ''}
+                              onChange={e => setGuideInputs(prev => ({ ...prev, [guide.name]: e.target.value }))}
+                              placeholder={`Paste ${guide.name} RSS URL here`}
+                              className="flex-1 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
+                              style={{ backgroundColor: '#111', border: '1px solid #2A2A2A' }}
+                            />
+                            <button
+                              onClick={() => {
+                                const url = (guideInputs[guide.name] ?? '').trim()
+                                if (!url) return
+                                try { new URL(url) } catch { return }
+                                if (!readerFeeds.some(f => f.url === url)) {
+                                  setReaderFeeds(prev => [...prev, { label: guide.name, url }])
+                                }
+                                setGuideInputs(prev => ({ ...prev, [guide.name]: '' }))
+                                setShowGuide(null)
+                              }}
+                              className="px-4 py-2.5 rounded-xl text-sm text-white font-semibold shrink-0"
+                              style={{ backgroundColor: col }}
+                            >
+                              Add
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
 
             <div className="space-y-2">
