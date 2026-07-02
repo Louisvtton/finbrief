@@ -142,7 +142,7 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
               {/* DIGEST */}
-              <div id="digest" data-reveal style={revD(0.1)} className="hover-lift rounded-2xl p-7 md:p-8 border flex flex-col" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
+              <div id="digest" data-reveal style={{ ...revD(0.1), borderColor: '#1A1A1A', backgroundColor: '#111' }} className="hover-lift rounded-2xl p-7 md:p-8 border flex flex-col">
                 <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-6 self-start" style={{ backgroundColor: 'rgba(29,158,117,0.12)', border: '1px solid rgba(29,158,117,0.25)' }}>
                   <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#1D9E75' }} />
                   <span className="text-xs font-semibold" style={{ color: '#1D9E75' }}>Finbrief Digest</span>
@@ -183,7 +183,7 @@ export default function LandingPage() {
               </div>
 
               {/* READER */}
-              <div id="reader" data-reveal style={revD(0.2)} className="hover-lift rounded-2xl p-7 md:p-8 border flex flex-col" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
+              <div id="reader" data-reveal style={{ ...revD(0.2), borderColor: '#1A1A1A', backgroundColor: '#111' }} className="hover-lift rounded-2xl p-7 md:p-8 border flex flex-col">
                 <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-6 self-start" style={{ backgroundColor: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.25)' }}>
                   <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#2563EB' }} />
                   <span className="text-xs font-semibold" style={{ color: '#2563EB' }}>Finbrief Reader</span>
@@ -319,7 +319,7 @@ export default function LandingPage() {
                 { title: 'Any publication with RSS', desc: 'Reader works with every publication that has an RSS feed. We walk you through finding it.', accent: '#2563EB' },
                 { title: 'Private by design', desc: 'Your watchlist and subscriptions are never shared or used to train models.', accent: '#777' },
               ].map((f, i) => (
-                <div key={f.title} data-reveal style={revD((i % 3) * 0.1)} className="rounded-2xl p-6 border" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
+                <div key={f.title} data-reveal style={{ ...revD((i % 3) * 0.1), borderColor: '#1A1A1A', backgroundColor: '#111' }} className="rounded-2xl p-6 border">
                   <div className="w-2 h-2 rounded-full mb-4" style={{ backgroundColor: f.accent }} />
                   <h3 className="text-sm font-bold text-white mb-2">{f.title}</h3>
                   <p className="text-sm text-zinc-500 leading-relaxed">{f.desc}</p>
@@ -346,7 +346,7 @@ export default function LandingPage() {
                 { q: 'I replaced three newsletters with Finbrief. The pre-market brief is part of my morning routine now.', name: 'Sarah K.', role: 'Portfolio manager' },
                 { q: 'It knows my watchlist. That changes everything — no more sifting through market commentary I don\'t care about.', name: 'Tom R.', role: 'Day trader' },
               ].map((s, i) => (
-                <div key={s.name} data-reveal style={revD(i * 0.1)} className="rounded-2xl p-6 border flex flex-col justify-between" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
+                <div key={s.name} data-reveal style={{ ...revD(i * 0.1), borderColor: '#1A1A1A', backgroundColor: '#111' }} className="rounded-2xl p-6 border flex flex-col justify-between">
                   <p className="text-sm text-zinc-300 leading-relaxed mb-6">"{s.q}"</p>
                   <div>
                     <p className="text-sm font-bold text-white">{s.name}</p>
