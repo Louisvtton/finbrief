@@ -24,11 +24,11 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('name')
+    .select('name, products')
     .eq('id', user.id)
     .single()
 
-  if (profile?.name) redirect('/digest')
+  if (profile?.name) redirect(profile.products === 'reader' ? '/reader' : '/digest')
 
   return <OnboardingFlow userId={user.id} product={product} />
 }

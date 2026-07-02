@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import AssetSearch from './AssetSearch'
-import SourcePicker from './SourcePicker'
 import type { AssetType, WatchlistItem } from '@/types'
 
 const INDUSTRIES = [
@@ -46,26 +45,22 @@ const POPULAR_PICKS: { category: string; items: { ticker: string; name: string; 
     { ticker: 'V',     name: 'Visa',      assetType: 'stock' },
   ]},
   { category: 'European Stocks', items: [
-    { ticker: 'SHEL.L',  name: 'Shell',         assetType: 'stock' },
-    { ticker: 'AZN.L',   name: 'AstraZeneca',   assetType: 'stock' },
-    { ticker: 'HSBA.L',  name: 'HSBC',          assetType: 'stock' },
-    { ticker: 'BP.L',    name: 'BP',            assetType: 'stock' },
-    { ticker: 'BARC.L',  name: 'Barclays',      assetType: 'stock' },
-    { ticker: 'MC.PA',   name: 'LVMH',          assetType: 'stock' },
-    { ticker: 'AIR.PA',  name: 'Airbus',        assetType: 'stock' },
-    { ticker: 'SAP.DE',  name: 'SAP',           assetType: 'stock' },
-    { ticker: 'ASML.AS', name: 'ASML',          assetType: 'stock' },
-    { ticker: 'NESN.SW', name: 'Nestlé',        assetType: 'stock' },
+    { ticker: 'SHEL.L',  name: 'Shell',       assetType: 'stock' },
+    { ticker: 'AZN.L',   name: 'AstraZeneca', assetType: 'stock' },
+    { ticker: 'HSBA.L',  name: 'HSBC',        assetType: 'stock' },
+    { ticker: 'BP.L',    name: 'BP',          assetType: 'stock' },
+    { ticker: 'MC.PA',   name: 'LVMH',        assetType: 'stock' },
+    { ticker: 'AIR.PA',  name: 'Airbus',      assetType: 'stock' },
+    { ticker: 'SAP.DE',  name: 'SAP',         assetType: 'stock' },
+    { ticker: 'ASML.AS', name: 'ASML',        assetType: 'stock' },
   ]},
   { category: 'ETFs', items: [
-    { ticker: 'SPY',     name: 'S&P 500 ETF',       assetType: 'etf' },
-    { ticker: 'QQQ',     name: 'Nasdaq 100 ETF',     assetType: 'etf' },
-    { ticker: 'VOO',     name: 'Vanguard S&P 500',   assetType: 'etf' },
-    { ticker: 'VTI',     name: 'Total Stock Market',  assetType: 'etf' },
-    { ticker: 'ARKK',    name: 'ARK Innovation',      assetType: 'etf' },
-    { ticker: 'GLD',     name: 'SPDR Gold',           assetType: 'etf' },
-    { ticker: 'VUSA.L',  name: 'Vanguard S&P 500 (LSE)', assetType: 'etf' },
-    { ticker: 'ISF.L',   name: 'FTSE 100 ETF (LSE)',  assetType: 'etf' },
+    { ticker: 'SPY',    name: 'S&P 500 ETF',      assetType: 'etf' },
+    { ticker: 'QQQ',    name: 'Nasdaq 100 ETF',    assetType: 'etf' },
+    { ticker: 'VOO',    name: 'Vanguard S&P 500',  assetType: 'etf' },
+    { ticker: 'GLD',    name: 'SPDR Gold',         assetType: 'etf' },
+    { ticker: 'VUSA.L', name: 'Vanguard S&P (LSE)', assetType: 'etf' },
+    { ticker: 'ISF.L',  name: 'FTSE 100 ETF',      assetType: 'etf' },
   ]},
   { category: 'Crypto & Commodities', items: [
     { ticker: 'BTC-USD', name: 'Bitcoin',   assetType: 'crypto' },
@@ -73,19 +68,20 @@ const POPULAR_PICKS: { category: string; items: { ticker: string; name: string; 
     { ticker: 'SOL-USD', name: 'Solana',    assetType: 'crypto' },
     { ticker: 'GC=F',    name: 'Gold',      assetType: 'commodity' },
     { ticker: 'CL=F',    name: 'Crude Oil', assetType: 'commodity' },
-    { ticker: 'SI=F',    name: 'Silver',    assetType: 'commodity' },
   ]},
 ]
 
-const DIGEST_STEPS = ['Welcome', 'Your role', 'Your goals', 'Watchlist', 'Industries', 'News sources', 'Preferences', 'Review']
-const READER_STEPS = ['Welcome', 'Your interests', 'Subscriptions', 'Preferences', 'Review']
+// Digest: Welcome(0) Role(1) Goals(2) Watchlist(3) Industries(4) Preferences(5) Review(6)
+const DIGEST_STEPS = ['Welcome', 'Your role', 'Your goals', 'Watchlist', 'Industries', 'Preferences', 'Review']
+// Reader: Welcome(0) Interests(1) Subscriptions(2) About you(3) Preferences(4) Review(5)
+const READER_STEPS = ['Welcome', 'Your interests', 'Subscriptions', 'About you', 'Preferences', 'Review']
 
-const RSS_GUIDES: { name: string; url: string; instructions: string }[] = [
+const RSS_GUIDES = [
   { name: 'Financial Times', url: 'https://www.ft.com/myft/alerts', instructions: 'Sign in to ft.com, go to myFT > Alerts, and copy the RSS feed URL for any topic or section you follow.' },
-  { name: 'The Economist', url: 'https://www.economist.com/rss', instructions: 'Visit economist.com/rss to see all available feeds. Copy the URL for your preferred sections (e.g. Finance, Britain, Leaders).' },
-  { name: 'Bloomberg', url: 'https://www.bloomberg.com/feeds', instructions: 'Bloomberg offers limited public RSS. Try bloomberg.com/feed/podcast for audio, or use a third-party RSS bridge for full articles.' },
-  { name: 'Wall Street Journal', url: 'https://www.wsj.com/news/rss-news-and-feeds', instructions: 'Visit wsj.com/news/rss-news-and-feeds. Copy the XML feed URL for any section (Markets, Business, Tech, Opinion).' },
-  { name: 'Reuters', url: 'https://www.reuters.com/tools/rss', instructions: 'Visit reuters.com/tools/rss to see all section feeds. Copy the feed URL for Business, Markets, or any topic.' },
+  { name: 'The Economist', url: 'https://www.economist.com/rss', instructions: 'Visit economist.com/rss to see all available feeds. Copy the URL for your preferred sections (Finance, Leaders, etc.).' },
+  { name: 'Bloomberg', url: 'https://www.bloomberg.com/feeds', instructions: 'Bloomberg offers limited public RSS. Use a third-party RSS bridge for full articles or try their podcast feeds.' },
+  { name: 'Wall Street Journal', url: 'https://www.wsj.com/news/rss-news-and-feeds', instructions: 'Visit wsj.com/news/rss-news-and-feeds and copy the XML feed URL for any section (Markets, Business, Tech).' },
+  { name: 'Reuters', url: 'https://www.reuters.com/tools/rss', instructions: 'Visit reuters.com/tools/rss. Copy the feed URL for Business, Markets, or any topic you follow.' },
 ]
 
 const READER_TOPICS = [
@@ -96,12 +92,18 @@ const READER_TOPICS = [
   'Regulation / Policy', 'M&A / Deals', 'Emerging markets',
 ]
 
+// Shared style helpers
+const accent = (product: string) => product === 'reader' ? '#2563EB' : '#1D9E75'
+const accentBg = (product: string) => product === 'reader' ? 'rgba(37,99,235,0.12)' : 'rgba(29,158,117,0.12)'
+const accentBorder = (product: string) => product === 'reader' ? 'rgba(37,99,235,0.3)' : 'rgba(29,158,117,0.3)'
+
 export default function OnboardingFlow({ userId, product = 'digest' }: { userId: string; product?: 'digest' | 'reader' }) {
   const router = useRouter()
   const STEPS = product === 'reader' ? READER_STEPS : DIGEST_STEPS
   const [step, setStep] = useState(0)
   const [name, setName] = useState('')
-  // Digest-specific
+
+  // Digest state
   const [jobRole, setJobRole] = useState('')
   const [customJobRole, setCustomJobRole] = useState('')
   const [newsletterGoals, setNewsletterGoals] = useState<string[]>([])
@@ -109,24 +111,27 @@ export default function OnboardingFlow({ userId, product = 'digest' }: { userId:
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([])
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([])
   const [customIndustry, setCustomIndustry] = useState('')
-  const [preferredSources, setPreferredSources] = useState<string[]>([])
   const [dailyFreq, setDailyFreq] = useState('daily')
   const [weeklyDigest, setWeeklyDigest] = useState(false)
   const [digestTime, setDigestTime] = useState('pre')
-  // Reader-specific
+
+  // Reader state
   const [readerTopics, setReaderTopics] = useState<string[]>([])
   const [readerFeeds, setReaderFeeds] = useState<{ label: string; url: string }[]>([])
   const [feedUrl, setFeedUrl] = useState('')
   const [feedLabel, setFeedLabel] = useState('')
   const [feedError, setFeedError] = useState('')
+  const [readerAbout, setReaderAbout] = useState('')
   const [readerFreq, setReaderFreq] = useState('daily')
   const [showGuide, setShowGuide] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
+  const col = accent(product)
+  const colBg = accentBg(product)
+  const colBorder = accentBorder(product)
+
   const toggleIndustry = (label: string) =>
-    setSelectedIndustries(prev =>
-      prev.includes(label) ? prev.filter(i => i !== label) : [...prev, label]
-    )
+    setSelectedIndustries(prev => prev.includes(label) ? prev.filter(i => i !== label) : [...prev, label])
 
   const addCustomIndustry = () => {
     const trimmed = customIndustry.trim()
@@ -141,56 +146,52 @@ export default function OnboardingFlow({ userId, product = 'digest' }: { userId:
     const label = feedLabel.trim()
     if (!url) { setFeedError('Please enter a URL'); return }
     if (!label) { setFeedError('Please give this feed a name'); return }
-    try { new URL(url) } catch { setFeedError('That doesn\'t look like a valid URL'); return }
-    if (readerFeeds.some(f => f.url === url)) { setFeedError('You\'ve already added this feed'); return }
+    try { new URL(url) } catch { setFeedError("That doesn't look like a valid URL"); return }
+    if (readerFeeds.some(f => f.url === url)) { setFeedError('Already added'); return }
     setReaderFeeds(prev => [...prev, { label, url }])
-    setFeedUrl('')
-    setFeedLabel('')
-    setFeedError('')
+    setFeedUrl(''); setFeedLabel(''); setFeedError('')
   }
 
   const finish = async () => {
     setSaving(true)
 
     if (product === 'reader') {
-      await supabase
-        .from('profiles')
-        .update({
-          name,
-          products: 'reader',
-          frequency: readerFreq,
-          newsletter_goal: readerTopics.join(', '),
-        })
-        .eq('id', userId)
+      await supabase.from('profiles').update({
+        name,
+        products: 'reader',
+        frequency: readerFreq,
+        newsletter_goal: readerTopics.join(', '),
+        extra_context: readerAbout,
+      }).eq('id', userId)
 
-      // Save RSS feeds
       if (readerFeeds.length > 0) {
         await supabase.from('rss_feeds').insert(
           readerFeeds.map(f => ({ user_id: userId, label: f.label, url: f.url }))
         )
       }
     } else {
-      await supabase
-        .from('profiles')
-        .update({
-          name,
-          products: 'digest',
-          frequency: weeklyDigest ? (dailyFreq === 'none' ? 'weekly' : `${dailyFreq}+weekly`) : dailyFreq,
-          digest_time: digestTime,
-          preferred_sources: preferredSources.join(','),
-          job_role: jobRole === 'other' ? customJobRole : jobRole,
-          newsletter_goal: newsletterGoals.join(', ') + (extraContext ? ` — ${extraContext}` : ''),
-        })
-        .eq('id', userId)
+      await supabase.from('profiles').update({
+        name,
+        products: 'digest',
+        frequency: weeklyDigest ? (dailyFreq === 'none' ? 'weekly' : `${dailyFreq}+weekly`) : dailyFreq,
+        digest_time: digestTime,
+        job_role: jobRole === 'other' ? customJobRole : jobRole,
+        newsletter_goal: newsletterGoals.join(', ') + (extraContext ? ` — ${extraContext}` : ''),
+      }).eq('id', userId)
 
       if (selectedIndustries.length > 0) {
         await supabase.from('followed_industries').insert(
           selectedIndustries.map(label => ({ user_id: userId, label }))
         )
       }
+
+      if (watchlist.length > 0) {
+        await supabase.from('watchlist_items').insert(
+          watchlist.map(w => ({ user_id: userId, ticker: w.ticker, name: w.name, asset_type: w.assetType }))
+        )
+      }
     }
 
-    // Send welcome email (fire-and-forget)
     fetch('/api/welcome', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -198,127 +199,142 @@ export default function OnboardingFlow({ userId, product = 'digest' }: { userId:
     }).catch(() => {})
 
     setSaving(false)
-    router.push('/digest')
+    router.push(product === 'reader' ? '/reader' : '/digest')
   }
 
+  // Shared UI helpers
+  const Btn = ({ onClick, disabled, children, secondary }: { onClick: () => void; disabled?: boolean; children: React.ReactNode; secondary?: boolean }) => (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="flex-1 py-3.5 rounded-xl font-semibold text-sm transition-opacity disabled:opacity-40"
+      style={secondary
+        ? { backgroundColor: '#1A1A1A', color: '#888', border: '1px solid #2A2A2A' }
+        : { backgroundColor: col, color: '#fff' }
+      }
+    >
+      {children}
+    </button>
+  )
+
+  const Chip = ({ label, selected, onClick }: { label: string; selected: boolean; onClick: () => void }) => (
+    <button
+      onClick={onClick}
+      className="px-4 py-2 rounded-full text-sm border transition-all"
+      style={selected
+        ? { backgroundColor: col, borderColor: col, color: '#fff' }
+        : { backgroundColor: '#1A1A1A', borderColor: '#2A2A2A', color: '#888' }
+      }
+    >
+      {label}
+    </button>
+  )
+
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen flex flex-col items-center justify-center p-5" style={{ backgroundColor: '#0A0A0A' }}>
       <div className="w-full max-w-lg">
 
-        {/* Progress bar */}
-        <div className="flex gap-2 mb-8">
+        {/* Logo */}
+        <div className="flex items-center gap-0.5 mb-8">
+          <span className="font-extrabold text-lg" style={{ color: '#1D9E75' }}>fin</span>
+          <span className="font-extrabold text-lg text-white">brief</span>
+        </div>
+
+        {/* Progress */}
+        <div className="flex gap-1.5 mb-10">
           {STEPS.map((s, i) => (
-            <div key={s} className="flex-1 flex flex-col items-center gap-1">
-              <div
-                className="h-1.5 w-full rounded-full transition-colors"
-                style={{ backgroundColor: i <= step ? '#1D9E75' : '#e5e7eb' }}
-              />
-              <span className="text-xs text-gray-400 hidden sm:block">{s}</span>
-            </div>
+            <div key={s} className="flex-1 h-1 rounded-full transition-colors duration-300"
+              style={{ backgroundColor: i <= step ? col : '#222' }} />
           ))}
         </div>
 
-        {/* Step 0: Welcome */}
+        {/* Step label */}
+        <p className="text-xs font-semibold tracking-widest uppercase mb-6" style={{ color: col }}>
+          {product === 'reader' ? 'Reader' : 'Digest'} · {STEPS[step]}
+        </p>
+
+        {/* ───── STEP 0: WELCOME ───── */}
         {step === 0 && (
           <div className="space-y-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Welcome to Finbrief</h1>
-              <p className="text-gray-500 mt-2">
+              <h1 className="text-2xl font-extrabold text-white tracking-tight">
+                {product === 'reader' ? 'Set up your Reader' : 'Set up your Digest'}
+              </h1>
+              <p className="text-zinc-400 mt-2 text-sm leading-relaxed">
                 {product === 'reader'
-                  ? 'Your subscriptions, distilled by AI. Let\'s get you set up — takes about 2 minutes.'
-                  : 'Your personal finance digest. Let\'s get you set up — takes about 2 minutes.'}
+                  ? 'Connect your newsletters and we\'ll filter every article down to what actually matters to you.'
+                  : 'Build your watchlist and we\'ll write a personalised briefing around what you hold.'}
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">What should we call you?</label>
+              <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wide">Your first name</label>
               <input
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="Your first name"
-                className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40"
+                placeholder="Alex"
+                className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2"
+                style={{ backgroundColor: '#111', border: '1px solid #222' }}
+                onKeyDown={e => e.key === 'Enter' && name.trim() && setStep(1)}
               />
             </div>
             <button
               onClick={() => setStep(1)}
               disabled={!name.trim()}
-              className="w-full py-3 rounded-xl text-white font-semibold disabled:opacity-40"
-              style={{ backgroundColor: '#1D9E75' }}
+              className="w-full py-3.5 rounded-xl text-white font-bold text-sm disabled:opacity-40 transition-opacity hover:opacity-85"
+              style={{ backgroundColor: col }}
             >
-              Get started →
+              Get started
             </button>
           </div>
         )}
 
-        {/* ═══ READER STEPS ═══ */}
+        {/* ═══════════ READER STEPS ═══════════ */}
 
-        {/* Reader Step 1: Your interests */}
+        {/* Reader Step 1: Interests */}
         {product === 'reader' && step === 1 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">What topics interest you, {name}?</h2>
-              <p className="text-gray-500 mt-1 text-sm">We'll use these to filter your subscriptions and surface only the articles that matter.</p>
+              <h2 className="text-xl font-extrabold text-white tracking-tight">What topics matter to you, {name}?</h2>
+              <p className="text-zinc-400 mt-1 text-sm">We'll filter every article through these — only what's relevant lands in your inbox.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {READER_TOPICS.map(topic => {
-                const selected = readerTopics.includes(topic)
-                return (
-                  <button
-                    key={topic}
-                    onClick={() => setReaderTopics(prev =>
-                      selected ? prev.filter(t => t !== topic) : [...prev, topic]
-                    )}
-                    className="px-4 py-2 rounded-full text-sm border transition-colors"
-                    style={
-                      selected
-                        ? { backgroundColor: '#2563EB', borderColor: '#2563EB', color: '#fff' }
-                        : { backgroundColor: '#fff', borderColor: '#d1d5db', color: '#555' }
-                    }
-                  >
-                    {topic}
-                  </button>
-                )
-              })}
+              {READER_TOPICS.map(topic => (
+                <Chip key={topic} label={topic} selected={readerTopics.includes(topic)}
+                  onClick={() => setReaderTopics(prev => prev.includes(topic) ? prev.filter(t => t !== topic) : [...prev, topic])} />
+              ))}
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setStep(0)} className="flex-1 py-3 rounded-xl border border-zinc-200 text-sm font-medium text-gray-600">Back</button>
-              <button
-                onClick={() => setStep(2)}
-                disabled={readerTopics.length === 0}
-                className="flex-1 py-3 rounded-xl text-white font-semibold disabled:opacity-40"
-                style={{ backgroundColor: '#2563EB' }}
-              >
-                Continue
-              </button>
+              <Btn secondary onClick={() => setStep(0)}>Back</Btn>
+              <Btn onClick={() => setStep(2)} disabled={readerTopics.length === 0}>Continue</Btn>
             </div>
           </div>
         )}
 
         {/* Reader Step 2: Subscriptions */}
         {product === 'reader' && step === 2 && (
-          <div className="space-y-6">
+          <div className="space-y-5">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Connect your subscriptions</h2>
-              <p className="text-gray-500 mt-1 text-sm">Paste the RSS feed URL from any publication. Not sure where to find it? Tap a guide below.</p>
+              <h2 className="text-xl font-extrabold text-white tracking-tight">Connect your subscriptions</h2>
+              <p className="text-zinc-400 mt-1 text-sm">Paste the RSS URL from any publication you subscribe to. Not sure where to find it? Use the guides below.</p>
             </div>
 
-            {/* Quick guides */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Find your RSS feed</p>
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-2">Find your RSS link</p>
               {RSS_GUIDES.map(guide => (
                 <div key={guide.name}>
                   <button
                     onClick={() => setShowGuide(showGuide === guide.name ? null : guide.name)}
-                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left text-sm font-medium transition-colors hover:bg-zinc-50"
-                    style={{ borderColor: '#e5e7eb' }}
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-left text-sm font-medium transition-colors"
+                    style={{ backgroundColor: '#111', border: '1px solid #222', color: '#ccc' }}
                   >
-                    <span className="text-gray-800">{guide.name}</span>
-                    <span className="text-xs text-gray-400">{showGuide === guide.name ? 'Hide' : 'Show guide'}</span>
+                    <span>{guide.name}</span>
+                    <span className="text-xs text-zinc-500">{showGuide === guide.name ? 'Hide' : 'Show guide'}</span>
                   </button>
                   {showGuide === guide.name && (
-                    <div className="mx-4 mt-1 mb-2 px-4 py-3 rounded-lg text-xs text-gray-600 leading-relaxed" style={{ backgroundColor: '#F8F8F8' }}>
+                    <div className="mx-1 mt-1 mb-2 px-4 py-3 rounded-xl text-xs text-zinc-400 leading-relaxed" style={{ backgroundColor: '#111', border: '1px solid #1A1A1A' }}>
                       <p className="mb-2">{guide.instructions}</p>
-                      <a href={guide.url} target="_blank" rel="noopener noreferrer" className="font-semibold" style={{ color: '#2563EB' }}>
-                        Open {guide.name} RSS page
+                      <a href={guide.url} target="_blank" rel="noopener noreferrer" className="font-semibold" style={{ color: col }}>
+                        Open {guide.name} page
                       </a>
                     </div>
                   )}
@@ -326,47 +342,33 @@ export default function OnboardingFlow({ userId, product = 'digest' }: { userId:
               ))}
             </div>
 
-            {/* Add feed form */}
             <div className="space-y-2">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Add a feed</p>
-              <input
-                value={feedLabel}
-                onChange={e => setFeedLabel(e.target.value)}
-                placeholder="Name (e.g. FT Markets)"
-                className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/40"
-              />
+              <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Add a feed</p>
+              <input value={feedLabel} onChange={e => setFeedLabel(e.target.value)} placeholder="Name (e.g. FT Markets)"
+                className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none"
+                style={{ backgroundColor: '#111', border: '1px solid #222' }} />
               <div className="flex gap-2">
-                <input
-                  value={feedUrl}
-                  onChange={e => { setFeedUrl(e.target.value); setFeedError('') }}
+                <input value={feedUrl} onChange={e => { setFeedUrl(e.target.value); setFeedError('') }}
                   placeholder="Paste RSS feed URL"
-                  className="flex-1 border border-zinc-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/40"
-                />
-                <button
-                  onClick={addFeed}
-                  className="px-4 py-2.5 rounded-lg text-sm text-white font-medium"
-                  style={{ backgroundColor: '#2563EB' }}
-                >
+                  className="flex-1 rounded-xl px-4 py-3 text-sm text-white focus:outline-none"
+                  style={{ backgroundColor: '#111', border: '1px solid #222' }} />
+                <button onClick={addFeed} className="px-5 py-3 rounded-xl text-sm text-white font-semibold" style={{ backgroundColor: col }}>
                   Add
                 </button>
               </div>
-              {feedError && <p className="text-xs text-red-500">{feedError}</p>}
+              {feedError && <p className="text-xs text-red-400">{feedError}</p>}
             </div>
 
-            {/* Added feeds */}
             {readerFeeds.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Your feeds ({readerFeeds.length})</p>
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Added ({readerFeeds.length})</p>
                 {readerFeeds.map((f, i) => (
-                  <div key={i} className="flex items-center justify-between px-4 py-2.5 rounded-xl border border-zinc-200 bg-zinc-50">
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">{f.label}</p>
-                      <p className="text-xs text-gray-400 truncate max-w-[300px]">{f.url}</p>
+                  <div key={i} className="flex items-center justify-between px-4 py-3 rounded-xl" style={{ backgroundColor: '#111', border: '1px solid #222' }}>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white">{f.label}</p>
+                      <p className="text-xs text-zinc-500 truncate">{f.url}</p>
                     </div>
-                    <button
-                      onClick={() => setReaderFeeds(prev => prev.filter((_, j) => j !== i))}
-                      className="text-xs text-gray-400 hover:text-red-500 ml-2"
-                    >
+                    <button onClick={() => setReaderFeeds(prev => prev.filter((_, j) => j !== i))} className="text-xs text-zinc-500 hover:text-red-400 ml-3 shrink-0">
                       Remove
                     </button>
                   </div>
@@ -375,522 +377,371 @@ export default function OnboardingFlow({ userId, product = 'digest' }: { userId:
             )}
 
             <div className="flex gap-3">
-              <button onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl border border-zinc-200 text-sm font-medium text-gray-600">Back</button>
-              <button
-                onClick={() => setStep(3)}
-                className="flex-1 py-3 rounded-xl text-white font-semibold"
-                style={{ backgroundColor: '#2563EB' }}
-              >
-                {readerFeeds.length === 0 ? 'Skip for now' : `Continue (${readerFeeds.length} feeds)`}
-              </button>
+              <Btn secondary onClick={() => setStep(1)}>Back</Btn>
+              <Btn onClick={() => setStep(3)}>
+                {readerFeeds.length === 0 ? 'Skip for now' : `Continue (${readerFeeds.length})`}
+              </Btn>
             </div>
           </div>
         )}
 
-        {/* Reader Step 3: Preferences */}
+        {/* Reader Step 3: About you */}
         {product === 'reader' && step === 3 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Delivery preferences</h2>
-              <p className="text-gray-500 mt-1 text-sm">How often should we send your curated read?</p>
+              <h2 className="text-xl font-extrabold text-white tracking-tight">Tell us a bit about yourself</h2>
+              <p className="text-zinc-400 mt-1 text-sm leading-relaxed">
+                The more context you give, the better Finbrief can filter and explain what matters to you. This is optional but makes a big difference.
+              </p>
             </div>
-            <div className="flex gap-2">
-              {[{ value: 'daily', label: 'Every morning' }, { value: '2x', label: 'Morning + evening' }, { value: 'weekly', label: 'Weekly digest' }].map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => setReaderFreq(opt.value)}
-                  className="flex-1 py-3 rounded-lg text-sm border font-medium transition-colors"
-                  style={
-                    readerFreq === opt.value
-                      ? { backgroundColor: '#2563EB', borderColor: '#2563EB', color: '#fff' }
-                      : { backgroundColor: '#fff', borderColor: '#d1d5db', color: '#555' }
-                  }
-                >
+            <div className="space-y-3">
+              {[
+                'I manage a portfolio focused on European equities and macro trends.',
+                'I work in private equity and care about deals, valuations, and credit markets.',
+                'I\'m a retail investor tracking US tech stocks and crypto.',
+                'I\'m a financial advisor preparing for client meetings each morning.',
+              ].map(eg => (
+                <button key={eg} onClick={() => setReaderAbout(eg)}
+                  className="w-full text-left px-4 py-3 rounded-xl text-xs text-zinc-400 transition-colors hover:text-white"
+                  style={{ backgroundColor: '#111', border: `1px solid ${readerAbout === eg ? col : '#222'}` }}>
+                  "{eg}"
+                </button>
+              ))}
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wide">Or write your own</label>
+              <textarea
+                value={readerAbout}
+                onChange={e => setReaderAbout(e.target.value)}
+                placeholder="Describe your background, what you invest in, what decisions you make day-to-day…"
+                rows={3}
+                className="w-full rounded-xl px-4 py-3 text-sm text-white resize-none focus:outline-none"
+                style={{ backgroundColor: '#111', border: '1px solid #222' }}
+              />
+            </div>
+            <div className="flex gap-3">
+              <Btn secondary onClick={() => setStep(2)}>Back</Btn>
+              <Btn onClick={() => setStep(4)}>
+                {readerAbout.trim() ? 'Continue' : 'Skip for now'}
+              </Btn>
+            </div>
+          </div>
+        )}
+
+        {/* Reader Step 4: Preferences */}
+        {product === 'reader' && step === 4 && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-extrabold text-white tracking-tight">How often should we send it?</h2>
+              <p className="text-zinc-400 mt-1 text-sm">Your curated read, delivered on your schedule.</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[{ value: 'daily', label: 'Every morning' }, { value: '2x', label: 'Twice daily' }, { value: 'weekly', label: 'Weekly' }].map(opt => (
+                <button key={opt.value} onClick={() => setReaderFreq(opt.value)}
+                  className="py-3.5 rounded-xl text-sm font-medium border transition-all"
+                  style={readerFreq === opt.value
+                    ? { backgroundColor: col, borderColor: col, color: '#fff' }
+                    : { backgroundColor: '#111', borderColor: '#222', color: '#888' }}>
                   {opt.label}
                 </button>
               ))}
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setStep(2)} className="flex-1 py-3 rounded-xl border border-zinc-200 text-sm font-medium text-gray-600">Back</button>
-              <button onClick={() => setStep(4)} className="flex-1 py-3 rounded-xl text-white font-semibold" style={{ backgroundColor: '#2563EB' }}>Continue</button>
+              <Btn secondary onClick={() => setStep(3)}>Back</Btn>
+              <Btn onClick={() => setStep(5)}>Continue</Btn>
             </div>
           </div>
         )}
 
-        {/* Reader Step 4: Review */}
-        {product === 'reader' && step === 4 && (
-          <div className="space-y-6">
+        {/* Reader Step 5: Review */}
+        {product === 'reader' && step === 5 && (
+          <div className="space-y-4">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Here's your setup, {name}</h2>
-              <p className="text-gray-500 mt-1 text-sm">Review everything before we launch your Reader. Tap any section to edit.</p>
+              <h2 className="text-xl font-extrabold text-white tracking-tight">Ready to go, {name}</h2>
+              <p className="text-zinc-400 mt-1 text-sm">Tap any section to edit before we launch.</p>
             </div>
 
-            <button onClick={() => setStep(1)} className="w-full text-left bg-white rounded-xl border border-zinc-200 p-4 hover:border-[#2563EB] transition-colors">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Topics</span>
-                <span className="text-xs" style={{ color: '#2563EB' }}>Edit</span>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {readerTopics.map(t => (
-                  <span key={t} className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#2563EB22', color: '#2563EB' }}>{t}</span>
-                ))}
-              </div>
-            </button>
-
-            <button onClick={() => setStep(2)} className="w-full text-left bg-white rounded-xl border border-zinc-200 p-4 hover:border-[#2563EB] transition-colors">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Subscriptions</span>
-                <span className="text-xs" style={{ color: '#2563EB' }}>Edit</span>
-              </div>
-              {readerFeeds.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {readerFeeds.map(f => (
-                    <span key={f.url} className="text-xs px-2.5 py-1 rounded-full font-medium bg-zinc-100 text-gray-700">{f.label}</span>
-                  ))}
+            {[
+              { label: 'Topics', goTo: 1, content: readerTopics.length > 0
+                ? <div className="flex flex-wrap gap-1.5 mt-1">{readerTopics.map(t => <span key={t} className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: colBg, color: col }}>{t}</span>)}</div>
+                : <p className="text-sm text-zinc-500 mt-1">None selected</p> },
+              { label: 'Subscriptions', goTo: 2, content: readerFeeds.length > 0
+                ? <div className="flex flex-wrap gap-1.5 mt-1">{readerFeeds.map(f => <span key={f.url} className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#1A1A1A', color: '#ccc' }}>{f.label}</span>)}</div>
+                : <p className="text-sm text-zinc-500 mt-1">No feeds yet — add later in Settings</p> },
+              { label: 'About you', goTo: 3, content: <p className="text-sm text-zinc-300 mt-1">{readerAbout || <span className="text-zinc-500">Not set</span>}</p> },
+              { label: 'Delivery', goTo: 4, content: <p className="text-sm text-zinc-300 mt-1">{readerFreq === 'daily' ? 'Every morning' : readerFreq === '2x' ? 'Twice daily' : 'Weekly'}</p> },
+            ].map(row => (
+              <button key={row.label} onClick={() => setStep(row.goTo)}
+                className="w-full text-left p-4 rounded-xl border transition-colors"
+                style={{ backgroundColor: '#111', borderColor: '#222' }}>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-zinc-500 uppercase tracking-wide">{row.label}</span>
+                  <span className="text-xs font-medium" style={{ color: col }}>Edit</span>
                 </div>
-              ) : <span className="text-sm text-gray-400">No feeds added yet — you can add later in Settings</span>}
-            </button>
-
-            <button onClick={() => setStep(3)} className="w-full text-left bg-white rounded-xl border border-zinc-200 p-4 hover:border-[#2563EB] transition-colors">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Delivery</span>
-                <span className="text-xs" style={{ color: '#2563EB' }}>Edit</span>
-              </div>
-              <p className="text-sm font-medium text-gray-800">
-                {readerFreq === 'daily' ? 'Every morning' : readerFreq === '2x' ? 'Morning + evening' : 'Weekly digest'}
-              </p>
-            </button>
-
-            <div className="flex gap-3">
-              <button onClick={() => setStep(3)} className="flex-1 py-3 rounded-xl border border-zinc-200 text-sm font-medium text-gray-600">Back</button>
-              <button
-                onClick={finish}
-                disabled={saving}
-                className="flex-1 py-3 rounded-xl text-white font-semibold disabled:opacity-50"
-                style={{ backgroundColor: '#2563EB' }}
-              >
-                {saving ? 'Setting up...' : 'Launch my Reader'}
+                {row.content}
               </button>
+            ))}
+
+            <div className="flex gap-3 pt-2">
+              <Btn secondary onClick={() => setStep(4)}>Back</Btn>
+              <Btn onClick={finish} disabled={saving}>{saving ? 'Setting up...' : 'Launch my Reader'}</Btn>
             </div>
           </div>
         )}
 
-        {/* ═══ DIGEST STEPS ═══ */}
+        {/* ═══════════ DIGEST STEPS ═══════════ */}
 
-        {/* Step 1: Your role */}
+        {/* Digest Step 1: Role */}
         {product === 'digest' && step === 1 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">What best describes you, {name}?</h2>
-              <p className="text-gray-500 mt-1 text-sm">This helps Claude tailor your digest to the right depth and focus.</p>
+              <h2 className="text-xl font-extrabold text-white tracking-tight">What best describes you, {name}?</h2>
+              <p className="text-zinc-400 mt-1 text-sm">Helps Claude tailor the depth and focus of your digest.</p>
             </div>
-
             <div className="grid grid-cols-2 gap-2">
               {JOB_ROLES.map(role => (
-                <button
-                  key={role.value}
-                  onClick={() => setJobRole(role.value)}
+                <button key={role.value} onClick={() => setJobRole(role.value)}
                   className="flex flex-col items-start px-4 py-3 rounded-xl border text-left transition-all"
-                  style={
-                    jobRole === role.value
-                      ? { backgroundColor: '#1D9E75', borderColor: '#1D9E75', color: '#fff' }
-                      : { backgroundColor: '#fff', borderColor: '#e5e7eb', color: '#374151' }
-                  }
-                >
-                  <span className="text-sm font-medium">{role.label}</span>
-                  <span className="text-xs mt-0.5 opacity-70">{role.desc}</span>
+                  style={jobRole === role.value
+                    ? { backgroundColor: col, borderColor: col, color: '#fff' }
+                    : { backgroundColor: '#111', borderColor: '#222', color: '#ccc' }}>
+                  <span className="text-sm font-semibold">{role.label}</span>
+                  <span className="text-xs mt-0.5 opacity-60">{role.desc}</span>
                 </button>
               ))}
-              <button
-                onClick={() => setJobRole('other')}
-                className="flex flex-col items-start px-4 py-3 rounded-xl border text-left transition-all col-span-2"
-                style={
-                  jobRole === 'other'
-                    ? { backgroundColor: '#1D9E75', borderColor: '#1D9E75', color: '#fff' }
-                    : { backgroundColor: '#fff', borderColor: '#e5e7eb', color: '#374151' }
-                }
-              >
-                <span className="text-sm font-medium">Other</span>
-                <span className="text-xs mt-0.5 opacity-70">My role isn't listed above</span>
+              <button onClick={() => setJobRole('other')}
+                className="flex flex-col items-start px-4 py-3 rounded-xl border text-left col-span-2 transition-all"
+                style={jobRole === 'other'
+                  ? { backgroundColor: col, borderColor: col, color: '#fff' }
+                  : { backgroundColor: '#111', borderColor: '#222', color: '#ccc' }}>
+                <span className="text-sm font-semibold">Other</span>
+                <span className="text-xs mt-0.5 opacity-60">My role isn't listed</span>
               </button>
             </div>
-
             {jobRole === 'other' && (
-              <input
-                value={customJobRole}
-                onChange={e => setCustomJobRole(e.target.value)}
-                placeholder="Describe your role (e.g. Hedge fund associate, Private equity analyst…)"
-                className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40"
-                autoFocus
-              />
+              <input value={customJobRole} onChange={e => setCustomJobRole(e.target.value)}
+                placeholder="Describe your role…"
+                className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none"
+                style={{ backgroundColor: '#111', border: '1px solid #333' }} autoFocus />
             )}
-
             <div className="flex gap-3">
-              <button onClick={() => setStep(0)} className="flex-1 py-3 rounded-xl border border-zinc-200 text-sm font-medium text-gray-600">← Back</button>
-              <button
-                onClick={() => setStep(2)}
-                disabled={!jobRole || (jobRole === 'other' && !customJobRole.trim())}
-                className="flex-1 py-3 rounded-xl text-white font-semibold disabled:opacity-40"
-                style={{ backgroundColor: '#1D9E75' }}
-              >
-                Continue →
-              </button>
+              <Btn secondary onClick={() => setStep(0)}>Back</Btn>
+              <Btn onClick={() => setStep(2)} disabled={!jobRole || (jobRole === 'other' && !customJobRole.trim())}>Continue</Btn>
             </div>
           </div>
         )}
 
-        {/* Step 2: Your goals */}
+        {/* Digest Step 2: Goals */}
         {product === 'digest' && step === 2 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">What do you want from Finbrief?</h2>
-              <p className="text-gray-500 mt-1 text-sm">Select all that apply — this shapes what Claude focuses on in every digest.</p>
+              <h2 className="text-xl font-extrabold text-white tracking-tight">What do you want from Finbrief?</h2>
+              <p className="text-zinc-400 mt-1 text-sm">Select all that apply — shapes what Claude focuses on.</p>
             </div>
-
             <div className="space-y-2">
               {NEWSLETTER_GOALS.map(goal => {
                 const selected = newsletterGoals.includes(goal.value)
                 return (
-                  <button
-                    key={goal.value}
-                    onClick={() => setNewsletterGoals(prev =>
-                      selected ? prev.filter(g => g !== goal.value) : [...prev, goal.value]
-                    )}
-                    className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border text-left transition-all text-sm font-medium"
-                    style={
-                      selected
-                        ? { backgroundColor: '#378ADD', borderColor: '#378ADD', color: '#fff' }
-                        : { backgroundColor: '#fff', borderColor: '#e5e7eb', color: '#374151' }
-                    }
-                  >
+                  <button key={goal.value}
+                    onClick={() => setNewsletterGoals(prev => selected ? prev.filter(g => g !== goal.value) : [...prev, goal.value])}
+                    className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border text-left text-sm font-medium transition-all"
+                    style={selected
+                      ? { backgroundColor: col, borderColor: col, color: '#fff' }
+                      : { backgroundColor: '#111', borderColor: '#222', color: '#ccc' }}>
                     <span>{goal.label}</span>
                     {selected && <span className="text-white text-xs shrink-0">✓</span>}
                   </button>
                 )
               })}
             </div>
-
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Anything else? <span className="font-normal text-gray-400">(optional)</span></label>
-              <textarea
-                value={extraContext}
-                onChange={e => setExtraContext(e.target.value)}
-                placeholder="e.g. I focus on UK mid-cap stocks, I'm preparing for retirement, I manage a $2M portfolio…"
+              <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wide">Anything else? <span className="normal-case">(optional)</span></label>
+              <textarea value={extraContext} onChange={e => setExtraContext(e.target.value)}
+                placeholder="e.g. I focus on UK mid-caps, preparing for retirement, managing a family office…"
                 rows={2}
-                className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40"
-              />
+                className="w-full rounded-xl px-4 py-3 text-sm text-white resize-none focus:outline-none"
+                style={{ backgroundColor: '#111', border: '1px solid #222' }} />
             </div>
-
             <div className="flex gap-3">
-              <button onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl border border-zinc-200 text-sm font-medium text-gray-600">← Back</button>
-              <button
-                onClick={() => setStep(3)}
-                disabled={newsletterGoals.length === 0}
-                className="flex-1 py-3 rounded-xl text-white font-semibold disabled:opacity-40"
-                style={{ backgroundColor: '#1D9E75' }}
-              >
-                Continue →
-              </button>
+              <Btn secondary onClick={() => setStep(1)}>Back</Btn>
+              <Btn onClick={() => setStep(3)} disabled={newsletterGoals.length === 0}>Continue</Btn>
             </div>
           </div>
         )}
 
-        {/* Step 3: Watchlist */}
+        {/* Digest Step 3: Watchlist */}
         {product === 'digest' && step === 3 && (
-          <div className="space-y-6">
+          <div className="space-y-5">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Build your watchlist</h2>
-              <p className="text-gray-500 mt-1 text-sm">Tap popular assets below or search for anything else.</p>
+              <h2 className="text-xl font-extrabold text-white tracking-tight">Build your watchlist</h2>
+              <p className="text-zinc-400 mt-1 text-sm">Tap to add, tap again to remove. Search for anything else below.</p>
             </div>
-
-            {/* Quick-pick popular stocks — grouped by category */}
             {POPULAR_PICKS.map(group => (
               <div key={group.category}>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">{group.category}</label>
+                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-2">{group.category}</p>
                 <div className="flex flex-wrap gap-2">
                   {group.items.map(stock => {
                     const added = watchlist.some(w => w.ticker === stock.ticker)
                     return (
-                      <button
-                        key={stock.ticker}
-                        onClick={() => {
-                          if (added) {
-                            setWatchlist(prev => prev.filter(w => w.ticker !== stock.ticker))
-                          } else {
-                            setWatchlist(prev => [...prev, { id: `quick-${stock.ticker}`, ...stock }])
-                          }
-                        }}
+                      <button key={stock.ticker}
+                        onClick={() => added
+                          ? setWatchlist(prev => prev.filter(w => w.ticker !== stock.ticker))
+                          : setWatchlist(prev => [...prev, { id: `quick-${stock.ticker}`, ...stock }])}
                         className="px-3 py-1.5 rounded-full text-xs font-medium border transition-all"
-                        style={
-                          added
-                            ? { backgroundColor: '#1D9E75', borderColor: '#1D9E75', color: '#fff' }
-                            : { backgroundColor: '#fff', borderColor: '#d1d5db', color: '#555' }
-                        }
-                      >
-                        {added && '✓ '}{stock.name}
+                        style={added
+                          ? { backgroundColor: col, borderColor: col, color: '#fff' }
+                          : { backgroundColor: '#111', borderColor: '#222', color: '#888' }}>
+                        {added ? '✓ ' : ''}{stock.name}
                       </button>
                     )
                   })}
                 </div>
               </div>
             ))}
-
-            {/* Search for more */}
             <div>
-              <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Or search for more</label>
-              <AssetSearch
-                userId={userId}
-                existing={watchlist}
+              <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-2">Search for more</p>
+              <AssetSearch userId={userId} existing={watchlist}
                 onAdd={item => setWatchlist(prev => [...prev, item])}
-                onRemove={id => setWatchlist(prev => prev.filter(i => i.id !== id))}
-              />
+                onRemove={id => setWatchlist(prev => prev.filter(i => i.id !== id))} />
             </div>
-
             <div className="flex gap-3">
-              <button onClick={() => setStep(2)} className="flex-1 py-3 rounded-xl border border-zinc-200 text-sm font-medium text-gray-600">← Back</button>
-              <button onClick={() => setStep(4)} className="flex-1 py-3 rounded-xl text-white font-semibold" style={{ backgroundColor: '#1D9E75' }}>
-                {watchlist.length === 0 ? 'Skip for now →' : `Continue (${watchlist.length} assets) →`}
-              </button>
+              <Btn secondary onClick={() => setStep(2)}>Back</Btn>
+              <Btn onClick={() => setStep(4)}>
+                {watchlist.length === 0 ? 'Skip for now' : `Continue (${watchlist.length})`}
+              </Btn>
             </div>
           </div>
         )}
 
-        {/* Step 4: Industries */}
+        {/* Digest Step 4: Industries */}
         {product === 'digest' && step === 4 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Follow industries</h2>
-              <p className="text-gray-500 mt-1 text-sm">We'll pull relevant news for these sectors in every digest.</p>
+              <h2 className="text-xl font-extrabold text-white tracking-tight">Follow industries</h2>
+              <p className="text-zinc-400 mt-1 text-sm">We'll pull relevant sector news into every digest.</p>
             </div>
-
             <div className="flex flex-wrap gap-2">
               {INDUSTRIES.map(ind => (
-                <button
-                  key={ind}
-                  onClick={() => toggleIndustry(ind)}
-                  className="px-4 py-2 rounded-full text-sm border transition-colors"
-                  style={
-                    selectedIndustries.includes(ind)
-                      ? { backgroundColor: '#378ADD', borderColor: '#378ADD', color: '#fff' }
-                      : { backgroundColor: '#fff', borderColor: '#d1d5db', color: '#555' }
-                  }
-                >
-                  {ind}
-                </button>
+                <Chip key={ind} label={ind} selected={selectedIndustries.includes(ind)} onClick={() => toggleIndustry(ind)} />
               ))}
             </div>
-
             {selectedIndustries.filter(i => !INDUSTRIES.includes(i)).length > 0 && (
-              <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Your custom topics</p>
-                <div className="flex flex-wrap gap-2">
-                  {selectedIndustries.filter(i => !INDUSTRIES.includes(i)).map(ind => (
-                    <div
-                      key={ind}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border"
-                      style={{ backgroundColor: '#378ADD', borderColor: '#378ADD', color: '#fff' }}
-                    >
-                      <span>{ind}</span>
-                      <button onClick={() => setSelectedIndustries(prev => prev.filter(i => i !== ind))} className="opacity-70 hover:opacity-100 leading-none">✕</button>
-                    </div>
-                  ))}
-                </div>
+              <div className="flex flex-wrap gap-2">
+                {selectedIndustries.filter(i => !INDUSTRIES.includes(i)).map(ind => (
+                  <div key={ind} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+                    style={{ backgroundColor: col, color: '#fff' }}>
+                    <span>{ind}</span>
+                    <button onClick={() => setSelectedIndustries(prev => prev.filter(i => i !== ind))} className="opacity-70 hover:opacity-100">✕</button>
+                  </div>
+                ))}
               </div>
             )}
-
             <div className="flex gap-2">
-              <input
-                value={customIndustry}
-                onChange={e => setCustomIndustry(e.target.value)}
+              <input value={customIndustry} onChange={e => setCustomIndustry(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addCustomIndustry()}
-                placeholder="Add custom topic (e.g. Space industry, Luxury goods…)"
-                className="flex-1 border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40"
-              />
-              <button onClick={addCustomIndustry} className="px-4 py-2 rounded-lg text-sm text-white font-medium" style={{ backgroundColor: '#378ADD' }}>Add</button>
+                placeholder="Add custom topic (e.g. Space, Luxury goods…)"
+                className="flex-1 rounded-xl px-4 py-3 text-sm text-white focus:outline-none"
+                style={{ backgroundColor: '#111', border: '1px solid #222' }} />
+              <button onClick={addCustomIndustry} className="px-5 py-3 rounded-xl text-sm text-white font-semibold" style={{ backgroundColor: col }}>
+                Add
+              </button>
             </div>
-
             <div className="flex gap-3">
-              <button onClick={() => setStep(3)} className="flex-1 py-3 rounded-xl border border-zinc-200 text-sm font-medium text-gray-600">← Back</button>
-              <button onClick={() => setStep(5)} className="flex-1 py-3 rounded-xl text-white font-semibold" style={{ backgroundColor: '#1D9E75' }}>Continue →</button>
+              <Btn secondary onClick={() => setStep(3)}>Back</Btn>
+              <Btn onClick={() => setStep(5)}>Continue</Btn>
             </div>
           </div>
         )}
 
-        {/* Step 5: News sources */}
+        {/* Digest Step 5: Preferences */}
         {product === 'digest' && step === 5 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Where do you get your news?</h2>
-              <p className="text-gray-500 mt-1 text-sm">We'll pull industry news only from the sources you trust. Leave blank for our unbiased default (Reuters, AP, BBC).</p>
-            </div>
-            <SourcePicker selected={preferredSources} onChange={setPreferredSources} />
-            <div className="flex gap-3">
-              <button onClick={() => setStep(4)} className="flex-1 py-3 rounded-xl border border-zinc-200 text-sm font-medium text-gray-600">← Back</button>
-              <button onClick={() => setStep(6)} className="flex-1 py-3 rounded-xl text-white font-semibold" style={{ backgroundColor: '#1D9E75' }}>Continue →</button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 6: Preferences */}
-        {product === 'digest' && step === 6 && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Delivery preferences</h2>
-              <p className="text-gray-500 mt-1 text-sm">When do you want your digest?</p>
+              <h2 className="text-xl font-extrabold text-white tracking-tight">Delivery preferences</h2>
+              <p className="text-zinc-400 mt-1 text-sm">When do you want your digest?</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Daily digest</label>
-              <div className="flex gap-2">
+              <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wide">Daily frequency</label>
+              <div className="grid grid-cols-3 gap-2">
                 {[{ value: 'daily', label: 'Once a day' }, { value: '2x', label: 'Twice a day' }, { value: 'none', label: 'No daily' }].map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setDailyFreq(opt.value)}
-                    className="flex-1 py-2.5 rounded-lg text-sm border font-medium transition-colors"
-                    style={
-                      dailyFreq === opt.value
-                        ? { backgroundColor: '#1D9E75', borderColor: '#1D9E75', color: '#fff' }
-                        : { backgroundColor: '#fff', borderColor: '#d1d5db', color: '#555' }
-                    }
-                  >
+                  <button key={opt.value} onClick={() => setDailyFreq(opt.value)}
+                    className="py-3 rounded-xl text-sm font-medium border transition-all"
+                    style={dailyFreq === opt.value
+                      ? { backgroundColor: col, borderColor: col, color: '#fff' }
+                      : { backgroundColor: '#111', borderColor: '#222', color: '#888' }}>
                     {opt.label}
                   </button>
                 ))}
               </div>
             </div>
-            <div className="flex items-center justify-between py-2 px-1">
-              <div>
-                <p className="text-sm font-medium text-gray-700">Weekly summary</p>
-                <p className="text-xs text-gray-400">A broader recap every week</p>
-              </div>
-              <button
-                onClick={() => setWeeklyDigest(prev => !prev)}
-                className="relative w-11 h-6 rounded-full transition-colors"
-                style={{ backgroundColor: weeklyDigest ? '#1D9E75' : '#d1d5db' }}
-              >
-                <span
-                  className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform"
-                  style={{ transform: weeklyDigest ? 'translateX(20px)' : 'translateX(0)' }}
-                />
-              </button>
-            </div>
             {dailyFreq !== 'none' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Daily timing</label>
+                <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wide">Timing</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {[{ value: 'pre', label: '☀️ Pre-market' }, { value: 'eod', label: '📊 End of day' }, { value: 'both', label: '⚡ Both' }].map(opt => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setDigestTime(opt.value)}
-                      className="py-2.5 rounded-lg text-sm border font-medium transition-colors"
-                      style={
-                        digestTime === opt.value
-                          ? { backgroundColor: '#378ADD', borderColor: '#378ADD', color: '#fff' }
-                          : { backgroundColor: '#fff', borderColor: '#d1d5db', color: '#555' }
-                      }
-                    >
+                  {[{ value: 'pre', label: 'Pre-market' }, { value: 'eod', label: 'End of day' }, { value: 'both', label: 'Both' }].map(opt => (
+                    <button key={opt.value} onClick={() => setDigestTime(opt.value)}
+                      className="py-3 rounded-xl text-sm font-medium border transition-all"
+                      style={digestTime === opt.value
+                        ? { backgroundColor: col, borderColor: col, color: '#fff' }
+                        : { backgroundColor: '#111', borderColor: '#222', color: '#888' }}>
                       {opt.label}
                     </button>
                   ))}
                 </div>
               </div>
             )}
+            <div className="flex items-center justify-between py-2 px-4 rounded-xl" style={{ backgroundColor: '#111', border: '1px solid #222' }}>
+              <div>
+                <p className="text-sm font-medium text-white">Weekly summary</p>
+                <p className="text-xs text-zinc-500">A broader recap every Friday</p>
+              </div>
+              <button onClick={() => setWeeklyDigest(prev => !prev)}
+                className="relative w-11 h-6 rounded-full transition-colors"
+                style={{ backgroundColor: weeklyDigest ? col : '#2A2A2A' }}>
+                <span className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform"
+                  style={{ transform: weeklyDigest ? 'translateX(20px)' : 'translateX(0)' }} />
+              </button>
+            </div>
             <div className="flex gap-3">
-              <button onClick={() => setStep(5)} className="flex-1 py-3 rounded-xl border border-zinc-200 text-sm font-medium text-gray-600">← Back</button>
-              <button onClick={() => setStep(7)} className="flex-1 py-3 rounded-xl text-white font-semibold" style={{ backgroundColor: '#1D9E75' }}>Continue →</button>
+              <Btn secondary onClick={() => setStep(4)}>Back</Btn>
+              <Btn onClick={() => setStep(6)}>Continue</Btn>
             </div>
           </div>
         )}
 
-        {/* Step 7: Review */}
-        {product === 'digest' && step === 7 && (
-          <div className="space-y-6">
+        {/* Digest Step 6: Review */}
+        {product === 'digest' && step === 6 && (
+          <div className="space-y-4">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Here's your setup, {name}</h2>
-              <p className="text-gray-500 mt-1 text-sm">Review everything before we launch your digest. Tap any section to go back and edit.</p>
+              <h2 className="text-xl font-extrabold text-white tracking-tight">Ready to go, {name}</h2>
+              <p className="text-zinc-400 mt-1 text-sm">Tap any section to edit before we launch.</p>
             </div>
 
-            {/* Role */}
-            <button onClick={() => setStep(1)} className="w-full text-left bg-white rounded-xl border border-zinc-200 p-4 hover:border-[#1D9E75] transition-colors">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Your role</span>
-                <span className="text-xs text-[#1D9E75]">Edit</span>
-              </div>
-              <p className="text-sm font-medium text-gray-800">
-                {jobRole === 'other' ? customJobRole : JOB_ROLES.find(r => r.value === jobRole)?.label ?? 'Not set'}
-              </p>
-            </button>
-
-            {/* Goals */}
-            <button onClick={() => setStep(2)} className="w-full text-left bg-white rounded-xl border border-zinc-200 p-4 hover:border-[#1D9E75] transition-colors">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Your goals</span>
-                <span className="text-xs text-[#1D9E75]">Edit</span>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {newsletterGoals.length > 0
-                  ? newsletterGoals.map(g => (
-                      <span key={g} className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#378ADD22', color: '#378ADD' }}>
-                        {NEWSLETTER_GOALS.find(ng => ng.value === g)?.label.replace(/^[^\s]+ /, '') ?? g}
-                      </span>
-                    ))
-                  : <span className="text-sm text-gray-400">None selected</span>
-                }
-              </div>
-              {extraContext && <p className="text-xs text-gray-500 mt-2 italic">"{extraContext}"</p>}
-            </button>
-
-            {/* Watchlist */}
-            <button onClick={() => setStep(3)} className="w-full text-left bg-white rounded-xl border border-zinc-200 p-4 hover:border-[#1D9E75] transition-colors">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Watchlist</span>
-                <span className="text-xs text-[#1D9E75]">Edit</span>
-              </div>
-              {watchlist.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {watchlist.map(w => (
-                    <span key={w.ticker} className="text-xs px-2.5 py-1 rounded-full font-medium bg-zinc-100 text-gray-700">{w.name}</span>
-                  ))}
+            {[
+              { label: 'Your role', goTo: 1, content: <p className="text-sm text-zinc-300 mt-1">{jobRole === 'other' ? customJobRole : JOB_ROLES.find(r => r.value === jobRole)?.label ?? 'Not set'}</p> },
+              { label: 'Your goals', goTo: 2, content: <div className="flex flex-wrap gap-1.5 mt-1">{newsletterGoals.map(g => <span key={g} className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: colBg, color: col }}>{NEWSLETTER_GOALS.find(ng => ng.value === g)?.label ?? g}</span>)}{extraContext && <p className="text-xs text-zinc-500 w-full mt-1 italic">"{extraContext}"</p>}</div> },
+              { label: 'Watchlist', goTo: 3, content: watchlist.length > 0
+                ? <div className="flex flex-wrap gap-1.5 mt-1">{watchlist.map(w => <span key={w.ticker} className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#1A1A1A', color: '#ccc' }}>{w.name}</span>)}</div>
+                : <p className="text-sm text-zinc-500 mt-1">None yet — add later</p> },
+              { label: 'Industries', goTo: 4, content: selectedIndustries.length > 0
+                ? <div className="flex flex-wrap gap-1.5 mt-1">{selectedIndustries.map(ind => <span key={ind} className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#1A1A1A', color: '#ccc' }}>{ind}</span>)}</div>
+                : <p className="text-sm text-zinc-500 mt-1">None selected</p> },
+              { label: 'Delivery', goTo: 5, content: <p className="text-sm text-zinc-300 mt-1">{dailyFreq === 'none' ? 'No daily' : dailyFreq === '2x' ? 'Twice daily' : 'Once daily'} — {digestTime === 'pre' ? 'Pre-market' : digestTime === 'eod' ? 'End of day' : 'Both'}{weeklyDigest ? ' + Weekly' : ''}</p> },
+            ].map(row => (
+              <button key={row.label} onClick={() => setStep(row.goTo)}
+                className="w-full text-left p-4 rounded-xl border transition-colors hover:border-zinc-600"
+                style={{ backgroundColor: '#111', borderColor: '#222' }}>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-zinc-500 uppercase tracking-wide">{row.label}</span>
+                  <span className="text-xs font-medium" style={{ color: col }}>Edit</span>
                 </div>
-              ) : <span className="text-sm text-gray-400">No assets yet — you can add later</span>}
-            </button>
-
-            {/* Industries */}
-            <button onClick={() => setStep(4)} className="w-full text-left bg-white rounded-xl border border-zinc-200 p-4 hover:border-[#1D9E75] transition-colors">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Industries</span>
-                <span className="text-xs text-[#1D9E75]">Edit</span>
-              </div>
-              {selectedIndustries.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {selectedIndustries.map(ind => (
-                    <span key={ind} className="text-xs px-2.5 py-1 rounded-full font-medium bg-zinc-100 text-gray-700">{ind}</span>
-                  ))}
-                </div>
-              ) : <span className="text-sm text-gray-400">None selected</span>}
-            </button>
-
-            {/* Delivery */}
-            <button onClick={() => setStep(6)} className="w-full text-left bg-white rounded-xl border border-zinc-200 p-4 hover:border-[#1D9E75] transition-colors">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Delivery</span>
-                <span className="text-xs text-[#1D9E75]">Edit</span>
-              </div>
-              <p className="text-sm font-medium text-gray-800">
-                {dailyFreq === 'none' ? 'No daily digest' : dailyFreq === '2x' ? 'Twice daily' : 'Once daily'}
-                {weeklyDigest ? ' + Weekly summary' : ''}
-              </p>
-            </button>
-
-            <div className="flex gap-3">
-              <button onClick={() => setStep(6)} className="flex-1 py-3 rounded-xl border border-zinc-200 text-sm font-medium text-gray-600">← Back</button>
-              <button
-                onClick={finish}
-                disabled={saving}
-                className="flex-1 py-3 rounded-xl text-white font-semibold disabled:opacity-50"
-                style={{ backgroundColor: '#1D9E75' }}
-              >
-                {saving ? 'Setting up...' : 'Launch my Digest'}
+                {row.content}
               </button>
+            ))}
+
+            <div className="flex gap-3 pt-2">
+              <Btn secondary onClick={() => setStep(5)}>Back</Btn>
+              <Btn onClick={finish} disabled={saving}>{saving ? 'Setting up...' : 'Launch my Digest'}</Btn>
             </div>
           </div>
         )}

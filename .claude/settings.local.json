@@ -21,7 +21,8 @@
       "WebFetch(domain:monzo.com)",
       "Bash(echo \"PID: $!\")",
       "Bash(sleep 5 && cat /tmp/finbrief-dev.log)",
-      "WebFetch(domain:www.verteal.com)"
+      "WebFetch(domain:www.verteal.com)",
+      "Bash(git remote *)"
     ]
   }
 }
