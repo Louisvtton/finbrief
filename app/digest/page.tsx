@@ -21,6 +21,12 @@ export default async function DigestPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('name, products')
+    .eq('id', user.id)
+    .single()
+
   // Fetch last 30 digests — newest first
   const { data: digestRows } = await supabase
     .from('digests')
@@ -40,6 +46,8 @@ export default async function DigestPage() {
     <DigestPageClient
       userId={user.id}
       digests={digests}
+      products={profile?.products ?? 'digest'}
+      userName={profile?.name ?? ''}
     />
   )
 }

@@ -22,7 +22,9 @@ function formatTime(iso: string) {
 const TYPE_LABELS: Record<string, string> = { pre: 'Pre-market', eod: 'End of day', weekly: 'Weekly' }
 const TYPE_COLORS: Record<string, string> = { pre: '#1D9E75', eod: '#2563EB', weekly: '#7C3AED' }
 
-export default function DigestPageClient({ userId, digests }: { userId: string; digests: DigestRow[] }) {
+export default function DigestPageClient({ userId, digests, products = 'digest', userName = '' }: { userId: string; digests: DigestRow[]; products?: string; userName?: string }) {
+  const hasBoth = products === 'both'
+  const [tab, setTab] = useState<'digest' | 'reader'>('digest')
   const [selectedId, setSelectedId] = useState<string>(digests[0]?.id ?? '')
   const [historyOpen, setHistoryOpen] = useState(false)
   const [generating, setGenerating] = useState<'pre' | 'eod' | 'weekly' | null>(null)
@@ -81,14 +83,30 @@ export default function DigestPageClient({ userId, digests }: { userId: string; 
       <nav className="sticky top-0 z-20 border-b px-5 h-16" style={{ backgroundColor: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(12px)', borderColor: '#1A1A1A' }}>
         <div className="max-w-3xl mx-auto h-full flex items-center justify-between gap-3">
 
-          {/* Logo */}
+          {/* Logo + tabs */}
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-center gap-0.5 shrink-0">
               <span className="font-extrabold text-lg" style={{ color: '#1D9E75' }}>fin</span>
               <span className="font-extrabold text-lg text-white">brief</span>
             </Link>
-            <span className="hidden md:block text-xs font-semibold tracking-widest uppercase text-zinc-500">Digest</span>
-            {digests.length > 0 && (
+            {/* Product tabs — show switcher if user has both, otherwise just label */}
+            {hasBoth ? (
+              <div className="flex items-center gap-1 rounded-lg p-1" style={{ backgroundColor: '#1A1A1A' }}>
+                <button onClick={() => setTab('digest')} className="px-3 py-1 rounded-md text-xs font-semibold transition-all"
+                  style={tab === 'digest' ? { backgroundColor: '#1D9E75', color: '#fff' } : { color: '#666' }}>
+                  Digest
+                </button>
+                <button onClick={() => setTab('reader')} className="px-3 py-1 rounded-md text-xs font-semibold transition-all"
+                  style={tab === 'reader' ? { backgroundColor: '#2563EB', color: '#fff' } : { color: '#666' }}>
+                  Reader
+                </button>
+              </div>
+            ) : (
+              <span className="hidden md:block text-xs font-semibold tracking-widest uppercase text-zinc-500">
+                {products === 'reader' ? 'Reader' : 'Digest'}
+              </span>
+            )}
+            {tab === 'digest' && digests.length > 0 && (
               <button
                 onClick={() => setHistoryOpen(o => !o)}
                 className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-all"
@@ -150,8 +168,37 @@ export default function DigestPageClient({ userId, digests }: { userId: string; 
 
       <div className="max-w-3xl mx-auto px-5">
 
-        {/* History panel */}
-        {historyOpen && (
+        {/* Reader panel */}
+        {tab === 'reader' && (
+          <div className="py-12">
+            <div className="mb-8">
+              <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-4" style={{ backgroundColor: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.25)' }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#2563EB' }} />
+                <span className="text-xs font-semibold" style={{ color: '#2563EB' }}>Finbrief Reader</span>
+              </div>
+              <h2 className="text-2xl font-extrabold text-white tracking-tight mb-1">
+                {userName ? `Good morning, ${userName}.` : 'Your Reader'}
+              </h2>
+              <p className="text-zinc-400 text-sm">Your curated read arrives each morning based on your connected subscriptions.</p>
+            </div>
+            <div className="rounded-2xl border p-6 mb-4" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
+              <p className="text-sm font-bold text-white mb-1">Your subscriptions</p>
+              <p className="text-sm text-zinc-400 mb-4">Manage your RSS feeds and topics in Settings.</p>
+              <Link href="/settings" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-semibold text-sm transition-opacity hover:opacity-85" style={{ backgroundColor: '#2563EB' }}>
+                Manage Reader settings
+              </Link>
+            </div>
+            <div className="rounded-2xl border p-6" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
+              <p className="text-sm font-bold text-white mb-2">Next delivery</p>
+              <p className="text-sm text-zinc-400 leading-relaxed">
+                Finbrief scans your feeds overnight and sends your curated read tomorrow morning — filtered to match your topics with AI summaries for each article.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* History panel (digest tab only) */}
+        {tab === 'digest' && historyOpen && (
           <div className="my-4 rounded-2xl border overflow-hidden" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
             <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: '#1A1A1A' }}>
               <h3 className="text-sm font-bold text-white">Digest history</h3>
@@ -186,7 +233,7 @@ export default function DigestPageClient({ userId, digests }: { userId: string; 
         )}
 
         {/* Empty state */}
-        {!selected && (
+        {tab === 'digest' && !selected && (
           <div className="py-24 text-center">
             <div className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center" style={{ backgroundColor: '#111', border: '1px solid #1A1A1A' }}>
               <div className="w-6 h-6 rounded-full" style={{ backgroundColor: '#1D9E75' }} />
@@ -212,7 +259,7 @@ export default function DigestPageClient({ userId, digests }: { userId: string; 
         )}
 
         {/* Digest content */}
-        {selected && (
+        {tab === 'digest' && selected && (
           <DigestView digest={selected.content} digestId={selected.id} userId={userId} />
         )}
       </div>
