@@ -27,25 +27,23 @@ export default async function DigestPage() {
     .eq('id', user.id)
     .single()
 
-  // Fetch last 30 digests — newest first
-  const { data: digestRows } = await supabase
+  const { data: allRows } = await supabase
     .from('digests')
     .select('id, digest_type, created_at, content')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
-    .limit(30)
+    .limit(50)
 
-  const digests = (digestRows ?? []).map((d: any) => ({
-    id: d.id,
-    digest_type: d.digest_type,
-    created_at: d.created_at,
-    content: d.content as DigestContent,
-  }))
+  const toRow = (d: any) => ({ id: d.id, digest_type: d.digest_type, created_at: d.created_at, content: d.content as DigestContent })
+  const READER_TYPES = new Set(['reader', 'reader_custom'])
+  const digests = (allRows ?? []).filter(d => !READER_TYPES.has(d.digest_type)).map(toRow)
+  const readerDigests = (allRows ?? []).filter(d => READER_TYPES.has(d.digest_type)).map(toRow)
 
   return (
     <DigestPageClient
       userId={user.id}
       digests={digests}
+      readerDigests={readerDigests}
       products={profile?.products ?? 'digest'}
       userName={profile?.name ?? ''}
     />
