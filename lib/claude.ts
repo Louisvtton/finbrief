@@ -9,7 +9,7 @@ export async function generateDigestWithClaude(
 ): Promise<DigestContent> {
   const message = await client.messages.create({
     model: 'claude-haiku-4-5',
-    max_tokens: 2048,
+    max_tokens: 4096,
     messages: [
       {
         role: 'user',
@@ -47,7 +47,7 @@ export async function createDigestBatch(
       custom_id: customId,
       params: {
         model: 'claude-haiku-4-5',
-        max_tokens: 2048,
+        max_tokens: 4096,
         system: systemPrompt,
         messages: [{ role: 'user' as const, content: userPrompt }],
       },

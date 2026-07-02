@@ -4,7 +4,24 @@
       "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --yes)",
       "Bash(npm config *)",
       "Read(//Users/louissost/**)",
-      "Bash(npx create-next-app@latest finbrief --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --yes)"
+      "Bash(npx create-next-app@latest finbrief --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --yes)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(vercel --version)",
+      "Bash(npx vercel *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(vercel --prod)",
+      "Bash(claude /cost)",
+      "WebFetch(domain:joincobalt.com)",
+      "WebFetch(domain:www.ft.com)",
+      "WebFetch(domain:www.altaroc.pe)",
+      "WebFetch(domain:monzo.com)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(sleep 5 && cat /tmp/finbrief-dev.log)",
+      "WebFetch(domain:www.verteal.com)"
     ]
   }
 }

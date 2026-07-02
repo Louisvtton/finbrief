@@ -1,0 +1,7 @@
+{
+  "crons": [
+    { "path": "/api/digest/send?type=pre",    "schedule": "0 7 * * 1-5" },
+    { "path": "/api/digest/send?type=eod",    "schedule": "0 17 * * 1-5" },
+    { "path": "/api/digest/send?type=weekly", "schedule": "0 17 * * 5" }
+  ]
+}
