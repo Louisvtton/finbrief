@@ -97,11 +97,11 @@ const accent = (product: string) => product === 'reader' ? '#2563EB' : '#1D9E75'
 const accentBg = (product: string) => product === 'reader' ? 'rgba(37,99,235,0.12)' : 'rgba(29,158,117,0.12)'
 const accentBorder = (product: string) => product === 'reader' ? 'rgba(37,99,235,0.3)' : 'rgba(29,158,117,0.3)'
 
-export default function OnboardingFlow({ userId, product = 'digest' }: { userId: string; product?: 'digest' | 'reader' }) {
+export default function OnboardingFlow({ userId, product = 'digest', isAdding = false, existingName = '' }: { userId: string; product?: 'digest' | 'reader'; isAdding?: boolean; existingName?: string }) {
   const router = useRouter()
   const STEPS = product === 'reader' ? READER_STEPS : DIGEST_STEPS
-  const [step, setStep] = useState(0)
-  const [name, setName] = useState('')
+  const [step, setStep] = useState(isAdding ? 1 : 0)
+  const [name, setName] = useState(existingName)
 
   // Digest state
   const [jobRole, setJobRole] = useState('')
@@ -158,7 +158,7 @@ export default function OnboardingFlow({ userId, product = 'digest' }: { userId:
     if (product === 'reader') {
       await supabase.from('profiles').update({
         name,
-        products: 'reader',
+        products: isAdding ? 'both' : 'reader',
         frequency: readerFreq,
         newsletter_goal: readerTopics.join(', '),
         extra_context: readerAbout,
@@ -172,7 +172,7 @@ export default function OnboardingFlow({ userId, product = 'digest' }: { userId:
     } else {
       await supabase.from('profiles').update({
         name,
-        products: 'digest',
+        products: isAdding ? 'both' : 'digest',
         frequency: weeklyDigest ? (dailyFreq === 'none' ? 'weekly' : `${dailyFreq}+weekly`) : dailyFreq,
         digest_time: digestTime,
         job_role: jobRole === 'other' ? customJobRole : jobRole,
@@ -199,7 +199,7 @@ export default function OnboardingFlow({ userId, product = 'digest' }: { userId:
     }).catch(() => {})
 
     setSaving(false)
-    router.push(product === 'reader' ? '/reader' : '/digest')
+    router.push(isAdding ? '/digest' : product === 'reader' ? '/reader' : '/digest')
   }
 
   // Shared UI helpers

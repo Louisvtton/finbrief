@@ -23,8 +23,9 @@ const TYPE_LABELS: Record<string, string> = { pre: 'Pre-market', eod: 'End of da
 const TYPE_COLORS: Record<string, string> = { pre: '#1D9E75', eod: '#2563EB', weekly: '#7C3AED' }
 
 export default function DigestPageClient({ userId, digests, products = 'digest', userName = '' }: { userId: string; digests: DigestRow[]; products?: string; userName?: string }) {
-  const hasBoth = products === 'both'
-  const [tab, setTab] = useState<'digest' | 'reader'>('digest')
+  const hasReader = products === 'reader' || products === 'both'
+  const hasDigest = products === 'digest' || products === 'both'
+  const [tab, setTab] = useState<'digest' | 'reader'>(hasDigest ? 'digest' : 'reader')
   const [selectedId, setSelectedId] = useState<string>(digests[0]?.id ?? '')
   const [historyOpen, setHistoryOpen] = useState(false)
   const [generating, setGenerating] = useState<'pre' | 'eod' | 'weekly' | null>(null)
@@ -89,23 +90,17 @@ export default function DigestPageClient({ userId, digests, products = 'digest',
               <span className="font-extrabold text-lg" style={{ color: '#1D9E75' }}>fin</span>
               <span className="font-extrabold text-lg text-white">brief</span>
             </Link>
-            {/* Product tabs — show switcher if user has both, otherwise just label */}
-            {hasBoth ? (
-              <div className="flex items-center gap-1 rounded-lg p-1" style={{ backgroundColor: '#1A1A1A' }}>
-                <button onClick={() => setTab('digest')} className="px-3 py-1 rounded-md text-xs font-semibold transition-all"
-                  style={tab === 'digest' ? { backgroundColor: '#1D9E75', color: '#fff' } : { color: '#666' }}>
-                  Digest
-                </button>
-                <button onClick={() => setTab('reader')} className="px-3 py-1 rounded-md text-xs font-semibold transition-all"
-                  style={tab === 'reader' ? { backgroundColor: '#2563EB', color: '#fff' } : { color: '#666' }}>
-                  Reader
-                </button>
-              </div>
-            ) : (
-              <span className="hidden md:block text-xs font-semibold tracking-widest uppercase text-zinc-500">
-                {products === 'reader' ? 'Reader' : 'Digest'}
-              </span>
-            )}
+            {/* Always show both tabs */}
+            <div className="flex items-center gap-1 rounded-lg p-1" style={{ backgroundColor: '#1A1A1A' }}>
+              <button onClick={() => setTab('digest')} className="px-3 py-1 rounded-md text-xs font-semibold transition-all"
+                style={tab === 'digest' ? { backgroundColor: '#1D9E75', color: '#fff' } : { color: '#666' }}>
+                Digest
+              </button>
+              <button onClick={() => setTab('reader')} className="px-3 py-1 rounded-md text-xs font-semibold transition-all"
+                style={tab === 'reader' ? { backgroundColor: '#2563EB', color: '#fff' } : { color: '#666' }}>
+                Reader
+              </button>
+            </div>
             {tab === 'digest' && digests.length > 0 && (
               <button
                 onClick={() => setHistoryOpen(o => !o)}
@@ -169,7 +164,35 @@ export default function DigestPageClient({ userId, digests, products = 'digest',
       <div className="max-w-3xl mx-auto px-5">
 
         {/* Reader panel */}
-        {tab === 'reader' && (
+        {tab === 'reader' && !hasReader && (
+          <div className="py-20 text-center">
+            <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-6" style={{ backgroundColor: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.25)' }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#2563EB' }} />
+              <span className="text-xs font-semibold" style={{ color: '#2563EB' }}>Finbrief Reader</span>
+            </div>
+            <h2 className="text-2xl font-extrabold text-white tracking-tight mb-3">Stop reading everything.</h2>
+            <p className="text-zinc-400 text-sm leading-relaxed max-w-sm mx-auto mb-2">
+              Connect your FT, Economist, or Bloomberg RSS feeds. Finbrief reads every article and sends you only what's relevant to your interests — with summaries.
+            </p>
+            <div className="flex flex-col items-center gap-2 text-xs text-zinc-500 mb-8">
+              {['Works with any publication that has an RSS feed', 'Filter by topics you care about', 'Delivered every morning alongside your Digest'].map(f => (
+                <div key={f} className="flex items-center gap-2">
+                  <span style={{ color: '#2563EB' }}>✓</span> {f}
+                </div>
+              ))}
+            </div>
+            <Link
+              href="/onboarding?product=reader&add=true"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-white font-bold text-sm transition-opacity hover:opacity-85"
+              style={{ backgroundColor: '#2563EB' }}
+            >
+              Set up Reader →
+            </Link>
+            <p className="text-xs text-zinc-600 mt-4">Takes 2 minutes. Uses your existing account.</p>
+          </div>
+        )}
+
+        {tab === 'reader' && hasReader && (
           <div className="py-12">
             <div className="mb-8">
               <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-4" style={{ backgroundColor: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.25)' }}>
@@ -191,7 +214,7 @@ export default function DigestPageClient({ userId, digests, products = 'digest',
             <div className="rounded-2xl border p-6" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
               <p className="text-sm font-bold text-white mb-2">Next delivery</p>
               <p className="text-sm text-zinc-400 leading-relaxed">
-                Finbrief scans your feeds overnight and sends your curated read tomorrow morning — filtered to match your topics with AI summaries for each article.
+                Finbrief scans your feeds overnight and sends your curated read each morning — filtered to match your topics with AI summaries.
               </p>
             </div>
           </div>

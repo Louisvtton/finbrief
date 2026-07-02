@@ -3,10 +3,11 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import OnboardingFlow from '@/components/OnboardingFlow'
 
-export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ product?: string }> }) {
+export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ product?: string; add?: string }> }) {
   const cookieStore = await cookies()
   const params = await searchParams
   const product = (params.product === 'reader' ? 'reader' : 'digest') as 'digest' | 'reader'
+  const isAdding = params.add === 'true'
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,7 +29,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
     .eq('id', user.id)
     .single()
 
-  if (profile?.name) redirect(profile.products === 'reader' ? '/reader' : '/digest')
+  if (profile?.name && !isAdding) redirect(profile.products === 'reader' ? '/reader' : '/digest')
 
-  return <OnboardingFlow userId={user.id} product={product} />
+  return <OnboardingFlow userId={user.id} product={product} isAdding={isAdding} existingName={profile?.name ?? ''} />
 }
