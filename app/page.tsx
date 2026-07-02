@@ -252,7 +252,7 @@ export default function LandingPage() {
                     { n: '03', title: 'Read and refine', desc: 'Rate each briefing. Finbrief adapts the depth, tone, and focus based on what you engage with.' },
                   ].map((s, i) => (
                     <div key={s.n} data-reveal style={revD(i * 0.1)} className="flex gap-5">
-                      <span className="text-3xl font-black shrink-0 leading-none mt-1" style={{ color: '#333' }}>{s.n}</span>
+                      <span className="text-3xl font-black shrink-0 leading-none mt-1" style={{ color: '#555' }}>{s.n}</span>
                       <div>
                         <h4 className="text-base font-bold text-white mb-1.5">{s.title}</h4>
                         <p className="text-sm text-zinc-500 leading-relaxed">{s.desc}</p>
@@ -280,7 +280,7 @@ export default function LandingPage() {
                     { n: '03', title: 'Get your curated read', desc: 'Every morning: only the articles relevant to you, with summaries so you can decide what deserves your full attention.' },
                   ].map((s, i) => (
                     <div key={s.n} data-reveal style={revD(i * 0.1)} className="flex gap-5">
-                      <span className="text-3xl font-black shrink-0 leading-none mt-1" style={{ color: '#333' }}>{s.n}</span>
+                      <span className="text-3xl font-black shrink-0 leading-none mt-1" style={{ color: '#555' }}>{s.n}</span>
                       <div>
                         <h4 className="text-base font-bold text-white mb-1.5">{s.title}</h4>
                         <p className="text-sm text-zinc-500 leading-relaxed">{s.desc}</p>

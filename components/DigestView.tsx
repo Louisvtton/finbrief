@@ -27,28 +27,31 @@ export default function DigestView({
       {/* Header */}
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-sm text-gray-400">{date}</span>
-          <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-            style={{
-              backgroundColor: digest.digestType === 'pre' ? '#FEF9EC' : digest.digestType === 'weekly' ? '#F5F3FF' : '#EEF4FF',
-              color: digest.digestType === 'pre' ? '#92400e' : digest.digestType === 'weekly' ? '#6D28D9' : '#1e40af',
-            }}>
-            {digest.digestType === 'pre' ? '☀️ Pre-market' : digest.digestType === 'weekly' ? '📅 Weekly roundup' : '📊 End of day'}
+          <span className="text-sm text-zinc-500">{date}</span>
+          <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold"
+            style={
+              digest.digestType === 'pre'
+                ? { backgroundColor: 'rgba(29,158,117,0.15)', color: '#1D9E75' }
+                : digest.digestType === 'weekly'
+                ? { backgroundColor: 'rgba(124,58,237,0.15)', color: '#a78bfa' }
+                : { backgroundColor: 'rgba(37,99,235,0.15)', color: '#60a5fa' }
+            }>
+            {digest.digestType === 'pre' ? 'Pre-market' : digest.digestType === 'weekly' ? 'Weekly roundup' : 'End of day'}
           </span>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">Your Daily Briefing</h1>
+        <h1 className="text-2xl font-bold text-white">Your Daily Briefing</h1>
       </div>
 
       {/* AI Summary */}
       <div className="rounded-xl bg-gradient-to-br from-[#1D9E75]/10 to-[#378ADD]/10 border border-[#1D9E75]/20 p-5">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-[#1D9E75] mb-2">AI Summary</h2>
-        <p className="text-gray-700 leading-relaxed">{digest.summary}</p>
+        <p className="text-zinc-300 leading-relaxed">{digest.summary}</p>
       </div>
 
       {/* Assets */}
       {digest.assets.length > 0 && (
         <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-3">Your Watchlist</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 mb-3">Your Watchlist</h2>
           {digest.assets.map(asset => (
             <AssetCard key={asset.ticker} asset={asset} userId={userId} />
           ))}
@@ -57,15 +60,15 @@ export default function DigestView({
 
       {/* Market Mood */}
       <section>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-3">Market Mood</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 mb-3">Market Mood</h2>
         <MarketMood mood={digest.marketMood} />
       </section>
 
       {/* News */}
       {digest.news.length > 0 && (
         <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-3">Industry News</h2>
-          <div className="rounded-xl border border-zinc-200 px-4 divide-y divide-zinc-100">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 mb-3">Industry News</h2>
+          <div className="rounded-xl border px-4 divide-y" style={{ borderColor: '#1A1A1A' }}>
             {digest.news.map((item, i) => (
               <NewsItem key={i} item={item} />
             ))}
@@ -76,7 +79,7 @@ export default function DigestView({
       {/* Feedback */}
       {!feedbackDone && (
         <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-3">Feedback</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 mb-3">Feedback</h2>
           <FeedbackForm userId={userId} digestId={digestId} onSubmitted={() => setFeedbackDone(true)} />
         </section>
       )}
