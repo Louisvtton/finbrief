@@ -85,8 +85,8 @@ export default function LandingPage() {
         {/* ══════════════════════════════
             HERO
         ══════════════════════════════ */}
-        <section className="min-h-screen flex flex-col justify-center px-5 pt-16" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(29,158,117,0.12) 0%, transparent 70%)' }}>
-          <div className="max-w-4xl mx-auto w-full py-24 md:py-32">
+        <section className="min-h-screen flex flex-col justify-center px-5 pt-16 text-center" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(29,158,117,0.12) 0%, transparent 70%)' }}>
+          <div className="max-w-3xl mx-auto w-full py-24 md:py-32">
 
             {/* Live badge */}
             <div className="anim-1 inline-flex items-center gap-2.5 rounded-full px-4 py-1.5 mb-10 border" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
@@ -101,11 +101,11 @@ export default function LandingPage() {
               </span>
             </h1>
 
-            <p className="anim-3 text-lg md:text-xl text-zinc-400 leading-relaxed max-w-xl mb-10">
+            <p className="anim-3 text-lg md:text-xl text-zinc-400 leading-relaxed max-w-xl mx-auto mb-10">
               Finbrief reads the markets and your newsletters so you don't have to. Two products, one account — built for investors who want clarity, not clutter.
             </p>
 
-            <div className="anim-4 flex flex-col sm:flex-row gap-3">
+            <div className="anim-4 flex flex-col sm:flex-row gap-3 justify-center">
               <Link href="/login" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-white font-bold text-base transition-opacity hover:opacity-85" style={{ backgroundColor: '#1D9E75' }}>
                 Get started free
               </Link>
@@ -113,7 +113,7 @@ export default function LandingPage() {
                 See how it works
               </a>
             </div>
-            <p className="anim-4 text-xs text-zinc-600 mt-4">No credit card. 2-minute setup.</p>
+            <p className="anim-4 text-xs text-zinc-600 mt-4 text-center">No credit card. 2-minute setup.</p>
           </div>
 
           {/* Scroll indicator */}

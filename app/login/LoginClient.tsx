@@ -79,7 +79,7 @@ export default function LoginClient({ product = 'digest' }: { product?: string }
           // Check if onboarding is complete
           const { data: profile } = await supabase
             .from('profiles')
-            .select('name')
+            .select('name, products')
             .eq('id', data.session.user.id)
             .single()
 
@@ -87,7 +87,7 @@ export default function LoginClient({ product = 'digest' }: { product?: string }
           if (!profile?.name) {
             router.push(`/onboarding?product=${product}`)
           } else {
-            router.push('/digest')
+            router.push(profile.products === 'reader' ? '/reader' : '/digest')
           }
         }
       }

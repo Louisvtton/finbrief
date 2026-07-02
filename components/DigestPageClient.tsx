@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import DigestView from './DigestView'
 import type { DigestContent } from '@/types'
 
@@ -12,24 +13,16 @@ interface DigestRow {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-GB', {
-    weekday: 'short', day: 'numeric', month: 'short',
-  })
+  return new Date(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 }
-
 function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-GB', {
-    hour: '2-digit', minute: '2-digit',
-  })
+  return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 }
 
-export default function DigestPageClient({
-  userId,
-  digests,
-}: {
-  userId: string
-  digests: DigestRow[]
-}) {
+const TYPE_LABELS: Record<string, string> = { pre: 'Pre-market', eod: 'End of day', weekly: 'Weekly' }
+const TYPE_COLORS: Record<string, string> = { pre: '#1D9E75', eod: '#2563EB', weekly: '#7C3AED' }
+
+export default function DigestPageClient({ userId, digests }: { userId: string; digests: DigestRow[] }) {
   const [selectedId, setSelectedId] = useState<string>(digests[0]?.id ?? '')
   const [historyOpen, setHistoryOpen] = useState(false)
   const [generating, setGenerating] = useState<'pre' | 'eod' | 'weekly' | null>(null)
@@ -37,6 +30,26 @@ export default function DigestPageClient({
   const [sending, setSending] = useState(false)
   const [sendStatus, setSendStatus] = useState<'idle' | 'sent' | 'error'>('idle')
   const [sendError, setSendError] = useState('')
+
+  const selected = digests.find(d => d.id === selectedId) ?? digests[0]
+
+  const generate = async (digestType: 'pre' | 'eod' | 'weekly') => {
+    setGenerating(digestType)
+    setGenError('')
+    try {
+      const res = await fetch('/api/digest/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, digestType }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Generation failed')
+      window.location.href = '/digest'
+    } catch (err: any) {
+      setGenError(err.message)
+      setGenerating(null)
+    }
+  }
 
   const sendEmail = async () => {
     if (!selected) return
@@ -61,168 +74,110 @@ export default function DigestPageClient({
     }
   }
 
-  const selected = digests.find(d => d.id === selectedId) ?? digests[0]
-
-  const generate = async (digestType: 'pre' | 'eod' | 'weekly') => {
-    setGenerating(digestType)
-    setGenError('')
-    try {
-      const res = await fetch('/api/digest/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, digestType }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Generation failed')
-      window.location.href = '/digest'
-    } catch (err: any) {
-      setGenError(err.message)
-      setGenerating(null)
-    }
-  }
-
   return (
-    <div className="min-h-screen bg-zinc-50">
+    <div className="min-h-screen" style={{ backgroundColor: '#0A0A0A', color: '#fff', fontFamily: 'var(--font-jakarta), system-ui, sans-serif' }}>
 
       {/* Nav */}
-      <nav className="bg-white border-b border-zinc-200 px-4 py-3 sticky top-0 z-20">
-        <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
-          {/* Left: logo + history */}
-          <div className="flex items-center gap-3">
-            <span className="font-bold text-lg" style={{ color: '#1D9E75' }}>finbrief</span>
+      <nav className="sticky top-0 z-20 border-b px-5 h-16" style={{ backgroundColor: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(12px)', borderColor: '#1A1A1A' }}>
+        <div className="max-w-3xl mx-auto h-full flex items-center justify-between gap-3">
+
+          {/* Logo */}
+          <div className="flex items-center gap-4">
+            <Link href="/" className="flex items-center gap-0.5 shrink-0">
+              <span className="font-extrabold text-lg" style={{ color: '#1D9E75' }}>fin</span>
+              <span className="font-extrabold text-lg text-white">brief</span>
+            </Link>
+            <span className="hidden md:block text-xs font-semibold tracking-widest uppercase text-zinc-500">Digest</span>
             {digests.length > 0 && (
               <button
                 onClick={() => setHistoryOpen(o => !o)}
-                className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-colors"
-                style={
-                  historyOpen
-                    ? { backgroundColor: '#1D9E75', borderColor: '#1D9E75', color: '#fff' }
-                    : { backgroundColor: '#fff', borderColor: '#e5e7eb', color: '#6b7280' }
-                }
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-all"
+                style={historyOpen
+                  ? { backgroundColor: '#1D9E75', borderColor: '#1D9E75', color: '#fff' }
+                  : { backgroundColor: '#111', borderColor: '#222', color: '#888' }}
               >
-                🕐 History
-                <span className="opacity-60">({digests.length})</span>
+                History ({digests.length})
               </button>
             )}
           </div>
 
-          {/* Right: settings + send + generate buttons */}
+          {/* Actions */}
           <div className="flex items-center gap-2">
-            <a href="/settings" className="text-sm text-gray-500 hover:text-gray-800 mr-1">Settings</a>
             {selected && (
               <button
                 onClick={sendEmail}
                 disabled={sending || !!generating}
-                className="text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-50 border transition-all"
-                style={
-                  sendStatus === 'sent'
-                    ? { backgroundColor: '#1D9E75', borderColor: '#1D9E75', color: '#fff' }
-                    : { backgroundColor: '#fff', borderColor: '#d1d5db', color: '#6b7280' }
-                }
+                className="hidden md:block text-xs px-3 py-1.5 rounded-lg font-medium border transition-all disabled:opacity-40"
+                style={sendStatus === 'sent'
+                  ? { backgroundColor: '#1D9E75', borderColor: '#1D9E75', color: '#fff' }
+                  : { backgroundColor: '#111', borderColor: '#222', color: '#888' }}
               >
-                {sending ? '📤 Sending…' : sendStatus === 'sent' ? '✓ Sent!' : '📧 Email me'}
+                {sending ? 'Sending...' : sendStatus === 'sent' ? 'Sent' : 'Email me'}
               </button>
             )}
-            <button
-              onClick={() => generate('pre')}
-              disabled={!!generating}
-              className="text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-50 border transition-colors"
-              style={
-                generating === 'pre'
-                  ? { backgroundColor: '#1D9E75', borderColor: '#1D9E75', color: '#fff' }
-                  : { backgroundColor: '#fff', borderColor: '#1D9E75', color: '#1D9E75' }
-              }
-            >
-              {generating === 'pre' ? '⏳…' : '☀️ Pre-market'}
-            </button>
-            <button
-              onClick={() => generate('eod')}
-              disabled={!!generating}
-              className="text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-50 border transition-colors"
-              style={
-                generating === 'eod'
-                  ? { backgroundColor: '#378ADD', borderColor: '#378ADD', color: '#fff' }
-                  : { backgroundColor: '#fff', borderColor: '#378ADD', color: '#378ADD' }
-              }
-            >
-              {generating === 'eod' ? '⏳…' : '📊 End of day'}
-            </button>
-            <button
-              onClick={() => generate('weekly')}
-              disabled={!!generating}
-              className="text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-50 border transition-colors"
-              style={
-                generating === 'weekly'
-                  ? { backgroundColor: '#7C3AED', borderColor: '#7C3AED', color: '#fff' }
-                  : { backgroundColor: '#fff', borderColor: '#7C3AED', color: '#7C3AED' }
-              }
-            >
-              {generating === 'weekly' ? '⏳…' : '📅 Weekly'}
-            </button>
+            {(['pre', 'eod', 'weekly'] as const).map(type => (
+              <button
+                key={type}
+                onClick={() => generate(type)}
+                disabled={!!generating}
+                className="text-xs px-3 py-1.5 rounded-lg font-semibold border transition-all disabled:opacity-40"
+                style={generating === type
+                  ? { backgroundColor: TYPE_COLORS[type], borderColor: TYPE_COLORS[type], color: '#fff' }
+                  : { backgroundColor: '#111', borderColor: TYPE_COLORS[type] + '66', color: TYPE_COLORS[type] }}
+              >
+                {generating === type ? 'Generating...' : TYPE_LABELS[type]}
+              </button>
+            ))}
+            <Link href="/settings"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white transition-opacity hover:opacity-80"
+              style={{ backgroundColor: '#1D9E75' }}>
+              U
+            </Link>
           </div>
         </div>
 
-        {/* Generating notice */}
-        {generating && (
-          <div className="max-w-2xl mx-auto mt-2">
-            <div className="text-xs text-center text-gray-400 bg-zinc-50 rounded-lg py-1.5 px-3">
-              ✨ Claude is reading the markets… takes 15–30 seconds
-            </div>
-          </div>
-        )}
-        {genError && (
-          <div className="max-w-2xl mx-auto mt-2">
-            <p className="text-xs text-red-500 text-center">{genError}</p>
-          </div>
-        )}
-        {sendStatus === 'error' && (
-          <div className="max-w-2xl mx-auto mt-2">
-            <p className="text-xs text-red-500 text-center">Email failed: {sendError}</p>
+        {/* Status bar */}
+        {(generating || genError || sendStatus === 'error') && (
+          <div className="max-w-3xl mx-auto pb-2">
+            {generating && (
+              <p className="text-xs text-center text-zinc-500">Claude is reading the markets — takes 15–30 seconds</p>
+            )}
+            {genError && <p className="text-xs text-red-400 text-center">{genError}</p>}
+            {sendStatus === 'error' && <p className="text-xs text-red-400 text-center">Email failed: {sendError}</p>}
           </div>
         )}
       </nav>
 
-      <div className="max-w-2xl mx-auto px-4">
+      <div className="max-w-3xl mx-auto px-5">
 
         {/* History panel */}
         {historyOpen && (
-          <div className="my-4 bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-zinc-100 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-700">Digest history</h3>
-              <button onClick={() => setHistoryOpen(false)} className="text-xs text-gray-400 hover:text-gray-600">Close ✕</button>
+          <div className="my-4 rounded-2xl border overflow-hidden" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
+            <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: '#1A1A1A' }}>
+              <h3 className="text-sm font-bold text-white">Digest history</h3>
+              <button onClick={() => setHistoryOpen(false)} className="text-xs text-zinc-500 hover:text-white transition-colors">Close</button>
             </div>
-            <div className="divide-y divide-zinc-50 max-h-64 overflow-y-auto">
+            <div className="divide-y max-h-64 overflow-y-auto" style={{ borderColor: '#1A1A1A' }}>
               {digests.map(d => {
                 const isActive = d.id === selectedId
+                const col = TYPE_COLORS[d.digest_type] ?? '#888'
                 return (
                   <button
                     key={d.id}
                     onClick={() => { setSelectedId(d.id); setHistoryOpen(false) }}
-                    className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-zinc-50 transition-colors"
-                    style={isActive ? { backgroundColor: '#F0FDF9' } : {}}
+                    className="w-full flex items-center justify-between px-5 py-3 text-left transition-colors hover:bg-white/5"
+                    style={isActive ? { backgroundColor: 'rgba(29,158,117,0.08)' } : {}}
                   >
                     <div className="flex items-center gap-3">
-                      {/* Type badge */}
-                      <span
-                        className="text-xs px-2 py-0.5 rounded-full font-semibold shrink-0"
-                        style={
-                          d.digest_type === 'pre'
-                            ? { backgroundColor: '#FEF9EC', color: '#92400E' }
-                            : d.digest_type === 'weekly'
-                            ? { backgroundColor: '#F5F3FF', color: '#6D28D9' }
-                            : { backgroundColor: '#EEF4FF', color: '#1e40af' }
-                        }
-                      >
-                        {d.digest_type === 'pre' ? '☀️ Pre' : d.digest_type === 'weekly' ? '📅 Weekly' : '📊 EOD'}
+                      <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold shrink-0" style={{ backgroundColor: col + '22', color: col }}>
+                        {TYPE_LABELS[d.digest_type] ?? d.digest_type}
                       </span>
                       <div>
-                        <div className="text-sm font-medium text-gray-800">{formatDate(d.created_at)}</div>
-                        <div className="text-xs text-gray-400">{formatTime(d.created_at)}</div>
+                        <p className="text-sm font-medium text-white">{formatDate(d.created_at)}</p>
+                        <p className="text-xs text-zinc-500">{formatTime(d.created_at)}</p>
                       </div>
                     </div>
-                    {isActive && (
-                      <span className="text-xs font-semibold" style={{ color: '#1D9E75' }}>Viewing</span>
-                    )}
+                    {isActive && <span className="text-xs font-semibold" style={{ color: '#1D9E75' }}>Viewing</span>}
                   </button>
                 )
               })}
@@ -230,47 +185,35 @@ export default function DigestPageClient({
           </div>
         )}
 
-        {/* Digest view */}
-        {selected ? (
-          <DigestView
-            digest={selected.content}
-            digestId={selected.id}
-            userId={userId}
-          />
-        ) : (
-          <div className="py-20 text-center">
-            <div className="text-5xl mb-4">📰</div>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">No digest yet</h2>
-            <p className="text-gray-500 mb-6">Generate your first digest to see personalised market insights.</p>
-            <div className="flex flex-wrap justify-center gap-3">
-              <button
-                onClick={() => generate('pre')}
-                disabled={!!generating}
-                className="px-6 py-3 rounded-xl text-white font-semibold disabled:opacity-50"
-                style={{ backgroundColor: '#1D9E75' }}
-              >
-                {generating === 'pre' ? '⏳ Generating…' : '☀️ Pre-market brief'}
-              </button>
-              <button
-                onClick={() => generate('eod')}
-                disabled={!!generating}
-                className="px-6 py-3 rounded-xl text-white font-semibold disabled:opacity-50"
-                style={{ backgroundColor: '#378ADD' }}
-              >
-                {generating === 'eod' ? '⏳ Generating…' : '📊 End of day brief'}
-              </button>
-              <button
-                onClick={() => generate('weekly')}
-                disabled={!!generating}
-                className="px-6 py-3 rounded-xl text-white font-semibold disabled:opacity-50"
-                style={{ backgroundColor: '#7C3AED' }}
-              >
-                {generating === 'weekly' ? '⏳ Generating…' : '📅 Weekly roundup'}
-              </button>
+        {/* Empty state */}
+        {!selected && (
+          <div className="py-24 text-center">
+            <div className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center" style={{ backgroundColor: '#111', border: '1px solid #1A1A1A' }}>
+              <div className="w-6 h-6 rounded-full" style={{ backgroundColor: '#1D9E75' }} />
             </div>
-            {generating && <p className="text-xs text-gray-400 mt-3">Takes 15–30 seconds — Claude is reading the markets…</p>}
-            {genError && <p className="text-sm text-red-500 mt-2">{genError}</p>}
+            <h2 className="text-2xl font-extrabold text-white mb-2 tracking-tight">No digest yet</h2>
+            <p className="text-zinc-400 mb-8 text-sm">Generate your first digest to see personalised market insights.</p>
+            <div className="flex flex-col sm:flex-row justify-center gap-3">
+              {(['pre', 'eod', 'weekly'] as const).map(type => (
+                <button
+                  key={type}
+                  onClick={() => generate(type)}
+                  disabled={!!generating}
+                  className="px-6 py-3.5 rounded-xl text-white font-bold text-sm disabled:opacity-50 transition-opacity hover:opacity-85"
+                  style={{ backgroundColor: TYPE_COLORS[type] }}
+                >
+                  {generating === type ? 'Generating...' : `${TYPE_LABELS[type]} brief`}
+                </button>
+              ))}
+            </div>
+            {generating && <p className="text-xs text-zinc-500 mt-4">Takes 15–30 seconds</p>}
+            {genError && <p className="text-sm text-red-400 mt-3">{genError}</p>}
           </div>
+        )}
+
+        {/* Digest content */}
+        {selected && (
+          <DigestView digest={selected.content} digestId={selected.id} userId={userId} />
         )}
       </div>
     </div>
