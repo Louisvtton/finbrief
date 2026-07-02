@@ -201,7 +201,7 @@ export default function OnboardingFlow({ userId, product = 'digest', isAdding = 
     }).catch(() => {})
 
     setSaving(false)
-    router.push(isAdding ? '/digest' : product === 'reader' ? '/reader' : '/digest')
+    router.push(isAdding ? '/digest?tab=reader' : product === 'reader' ? '/reader' : '/digest')
   }
 
   // Shared UI helpers

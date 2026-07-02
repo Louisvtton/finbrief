@@ -25,7 +25,8 @@ const TYPE_COLORS: Record<string, string> = { pre: '#1D9E75', eod: '#2563EB', we
 export default function DigestPageClient({ userId, digests, products = 'digest', userName = '' }: { userId: string; digests: DigestRow[]; products?: string; userName?: string }) {
   const hasReader = products === 'reader' || products === 'both'
   const hasDigest = products === 'digest' || products === 'both'
-  const [tab, setTab] = useState<'digest' | 'reader'>(hasDigest ? 'digest' : 'reader')
+  const initialTab = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'reader' ? 'reader' : hasDigest ? 'digest' : 'reader'
+  const [tab, setTab] = useState<'digest' | 'reader'>(initialTab)
   const [selectedId, setSelectedId] = useState<string>(digests[0]?.id ?? '')
   const [historyOpen, setHistoryOpen] = useState(false)
   const [generating, setGenerating] = useState<'pre' | 'eod' | 'weekly' | null>(null)
@@ -193,29 +194,33 @@ export default function DigestPageClient({ userId, digests, products = 'digest',
         )}
 
         {tab === 'reader' && hasReader && (
-          <div className="py-12">
-            <div className="mb-8">
-              <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-4" style={{ backgroundColor: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.25)' }}>
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#2563EB' }} />
-                <span className="text-xs font-semibold" style={{ color: '#2563EB' }}>Finbrief Reader</span>
-              </div>
-              <h2 className="text-2xl font-extrabold text-white tracking-tight mb-1">
-                {userName ? `Good morning, ${userName}.` : 'Your Reader'}
-              </h2>
-              <p className="text-zinc-400 text-sm">Your curated read arrives each morning based on your connected subscriptions.</p>
+          <div className="py-16 text-center">
+            <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-6" style={{ backgroundColor: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.25)' }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#2563EB' }} />
+              <span className="text-xs font-semibold" style={{ color: '#2563EB' }}>Finbrief Reader</span>
             </div>
-            <div className="rounded-2xl border p-6 mb-4" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
-              <p className="text-sm font-bold text-white mb-1">Your subscriptions</p>
-              <p className="text-sm text-zinc-400 mb-4">Manage your RSS feeds and topics in Settings.</p>
-              <Link href="/settings" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-semibold text-sm transition-opacity hover:opacity-85" style={{ backgroundColor: '#2563EB' }}>
-                Manage Reader settings
+            <div className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center" style={{ backgroundColor: '#111', border: '1px solid #1A1A1A' }}>
+              <div className="w-6 h-6 rounded-full" style={{ backgroundColor: '#2563EB' }} />
+            </div>
+            <h2 className="text-2xl font-extrabold text-white mb-2 tracking-tight">Your Reader is active</h2>
+            <p className="text-zinc-400 mb-8 text-sm max-w-sm mx-auto leading-relaxed">
+              Finbrief scans your connected feeds overnight and sends your curated read each morning — only articles relevant to your topics.
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center gap-3">
+              <Link
+                href="/settings"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-white font-bold text-sm transition-opacity hover:opacity-85"
+                style={{ backgroundColor: '#2563EB' }}
+              >
+                Manage subscriptions
               </Link>
-            </div>
-            <div className="rounded-2xl border p-6" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
-              <p className="text-sm font-bold text-white mb-2">Next delivery</p>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                Finbrief scans your feeds overnight and sends your curated read each morning — filtered to match your topics with AI summaries.
-              </p>
+              <Link
+                href="/settings"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-bold text-sm border transition-colors hover:border-zinc-500"
+                style={{ borderColor: '#222', color: '#888' }}
+              >
+                Edit topics
+              </Link>
             </div>
           </div>
         )}
