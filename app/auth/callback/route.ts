@@ -32,17 +32,21 @@ export async function GET(req: NextRequest) {
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('name')
+          .select('name, products')
           .eq('id', user.id)
           .single()
 
-        // New user (no name) → show confirmation page then go to onboarding
         if (!profile?.name) {
           return NextResponse.redirect(new URL(`/auth/confirmed?next=${encodeURIComponent(`/onboarding?product=${product}`)}`, req.url))
         }
+
+        let dest = '/digest'
+        if (product === 'reader') {
+          const hasReader = profile.products === 'reader' || profile.products === 'both'
+          dest = hasReader ? '/digest?tab=reader' : `/onboarding?product=reader&add=true`
+        }
+        return NextResponse.redirect(new URL(`/auth/confirmed?next=${encodeURIComponent(dest)}`, req.url))
       }
-      // Returning user via magic link → show confirmation page then go to digest
-      return NextResponse.redirect(new URL('/auth/confirmed?next=' + encodeURIComponent(next), req.url))
     }
   }
 

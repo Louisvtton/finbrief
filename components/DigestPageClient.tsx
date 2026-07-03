@@ -93,7 +93,6 @@ export default function DigestPageClient({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Generation failed')
-      // Add the new digest to the top of the list
       const newDigest: DigestRow = {
         id: data.digestId,
         digest_type: topic ? 'reader_custom' : 'reader',
@@ -136,99 +135,105 @@ export default function DigestPageClient({
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#0A0A0A', color: '#fff', fontFamily: 'var(--font-jakarta), system-ui, sans-serif' }}>
 
-      {/* Nav */}
-      <nav className="sticky top-0 z-20 border-b px-5 h-16" style={{ backgroundColor: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(12px)', borderColor: '#1A1A1A' }}>
-        <div className="max-w-3xl mx-auto h-full flex items-center justify-between gap-3">
-
-          <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-0.5 shrink-0">
-              <span className="font-extrabold text-lg" style={{ color: '#1D9E75' }}>fin</span>
-              <span className="font-extrabold text-lg text-white">brief</span>
-            </Link>
-            <div className="flex items-center gap-1 rounded-lg p-1" style={{ backgroundColor: '#1A1A1A' }}>
-              <button onClick={() => setTab('digest')} className="px-3 py-1 rounded-md text-xs font-semibold transition-all"
-                style={tab === 'digest' ? { backgroundColor: '#1D9E75', color: '#fff' } : { color: '#666' }}>
-                Digest
-              </button>
-              <button onClick={() => setTab('reader')} className="px-3 py-1 rounded-md text-xs font-semibold transition-all"
-                style={tab === 'reader' ? { backgroundColor: '#2563EB', color: '#fff' } : { color: '#666' }}>
-                Reader
-              </button>
-            </div>
-
-            {tab === 'digest' && digests.length > 0 && (
-              <button
-                onClick={() => setHistoryOpen(o => !o)}
-                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-all"
-                style={historyOpen
-                  ? { backgroundColor: '#1D9E75', borderColor: '#1D9E75', color: '#fff' }
-                  : { backgroundColor: '#111', borderColor: '#222', color: '#888' }}
-              >
-                History ({digests.length})
-              </button>
-            )}
-
-            {tab === 'reader' && hasReader && readerDigestList.length > 0 && (
-              <button
-                onClick={() => setReaderHistoryOpen(o => !o)}
-                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-all"
-                style={readerHistoryOpen
-                  ? { backgroundColor: '#2563EB', borderColor: '#2563EB', color: '#fff' }
-                  : { backgroundColor: '#111', borderColor: '#222', color: '#888' }}
-              >
-                History ({readerDigestList.length})
-              </button>
-            )}
-          </div>
-
+      {/* Top nav — logo + account only */}
+      <nav className="sticky top-0 z-20 border-b px-5 h-14" style={{ backgroundColor: 'rgba(10,10,10,0.97)', backdropFilter: 'blur(12px)', borderColor: '#1A1A1A' }}>
+        <div className="max-w-3xl mx-auto h-full flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-0.5">
+            <span className="font-extrabold text-lg" style={{ color: '#1D9E75' }}>fin</span>
+            <span className="font-extrabold text-lg text-white">brief</span>
+          </Link>
           <div className="flex items-center gap-2">
-            {tab === 'digest' && selected && (
-              <button
-                onClick={sendEmail}
-                disabled={sending || !!generating}
-                className="hidden md:block text-xs px-3 py-1.5 rounded-lg font-medium border transition-all disabled:opacity-40"
-                style={sendStatus === 'sent'
-                  ? { backgroundColor: '#1D9E75', borderColor: '#1D9E75', color: '#fff' }
-                  : { backgroundColor: '#111', borderColor: '#222', color: '#888' }}
-              >
-                {sending ? 'Sending...' : sendStatus === 'sent' ? 'Sent' : 'Email me'}
-              </button>
-            )}
-            {tab === 'digest' && (['pre', 'eod', 'weekly'] as const).map(type => (
-              <button
-                key={type}
-                onClick={() => generate(type)}
-                disabled={!!generating}
-                className="text-xs px-3 py-1.5 rounded-lg font-semibold border transition-all disabled:opacity-40"
-                style={generating === type
-                  ? { backgroundColor: TYPE_COLORS[type], borderColor: TYPE_COLORS[type], color: '#fff' }
-                  : { backgroundColor: '#111', borderColor: TYPE_COLORS[type] + '66', color: TYPE_COLORS[type] }}
-              >
-                {generating === type ? 'Generating...' : TYPE_LABELS[type]}
-              </button>
-            ))}
             <Link href="/settings"
-              className="text-xs px-3 py-1.5 rounded-lg font-medium border transition-colors hover:border-zinc-500"
-              style={{ borderColor: '#222', color: '#888', backgroundColor: '#111' }}>
+              className="text-sm font-medium px-3 py-1.5 rounded-lg border transition-colors hover:border-zinc-600 hover:text-white"
+              style={{ borderColor: '#222', color: '#666' }}>
               Settings
             </Link>
             <Link href="/settings"
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white transition-opacity hover:opacity-80"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
               style={{ backgroundColor: '#1D9E75' }}>
               {userName ? userName[0].toUpperCase() : 'U'}
             </Link>
           </div>
         </div>
-
-        {(generating || genError || sendStatus === 'error') && (
-          <div className="max-w-3xl mx-auto pb-2">
-            {generating && <p className="text-xs text-center text-zinc-500">Claude is reading the markets — takes 15–30 seconds</p>}
-            {genError && <p className="text-xs text-red-400 text-center">{genError}</p>}
-            {sendStatus === 'error' && <p className="text-xs text-red-400 text-center">Email failed: {sendError}</p>}
-          </div>
-        )}
       </nav>
 
+      {/* Prominent Digest / Reader tab bar */}
+      <div className="sticky top-14 z-10 border-b px-5" style={{ backgroundColor: 'rgba(10,10,10,0.97)', backdropFilter: 'blur(12px)', borderColor: '#1A1A1A' }}>
+        <div className="max-w-3xl mx-auto flex">
+          <button
+            onClick={() => setTab('digest')}
+            className="relative px-6 py-4 text-sm font-semibold transition-colors"
+            style={tab === 'digest' ? { color: '#1D9E75' } : { color: '#555' }}
+          >
+            Digest
+            {tab === 'digest' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ backgroundColor: '#1D9E75' }} />
+            )}
+          </button>
+          <button
+            onClick={() => setTab('reader')}
+            className="relative px-6 py-4 text-sm font-semibold transition-colors"
+            style={tab === 'reader' ? { color: '#2563EB' } : { color: '#555' }}
+          >
+            Reader
+            {tab === 'reader' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ backgroundColor: '#2563EB' }} />
+            )}
+          </button>
+          {/* Right-side actions for digest tab */}
+          {tab === 'digest' && (
+            <div className="ml-auto flex items-center gap-2 py-2">
+              {digests.length > 0 && (
+                <button onClick={() => setHistoryOpen(o => !o)}
+                  className="text-xs px-3 py-1.5 rounded-lg border font-medium transition-all"
+                  style={historyOpen
+                    ? { backgroundColor: '#1D9E75', borderColor: '#1D9E75', color: '#fff' }
+                    : { backgroundColor: 'transparent', borderColor: '#222', color: '#666' }}>
+                  History
+                </button>
+              )}
+              {selected && (
+                <button onClick={sendEmail} disabled={sending || !!generating}
+                  className="text-xs px-3 py-1.5 rounded-lg border font-medium transition-all disabled:opacity-40"
+                  style={sendStatus === 'sent'
+                    ? { backgroundColor: '#1D9E75', borderColor: '#1D9E75', color: '#fff' }
+                    : { backgroundColor: 'transparent', borderColor: '#222', color: '#666' }}>
+                  {sending ? 'Sending…' : sendStatus === 'sent' ? 'Sent' : 'Email me'}
+                </button>
+              )}
+              {(['pre', 'eod', 'weekly'] as const).map(type => (
+                <button key={type} onClick={() => generate(type)} disabled={!!generating}
+                  className="text-xs px-3 py-1.5 rounded-lg font-semibold border transition-all disabled:opacity-40"
+                  style={generating === type
+                    ? { backgroundColor: TYPE_COLORS[type], borderColor: TYPE_COLORS[type], color: '#fff' }
+                    : { backgroundColor: 'transparent', borderColor: TYPE_COLORS[type] + '55', color: TYPE_COLORS[type] }}>
+                  {generating === type ? '...' : TYPE_LABELS[type]}
+                </button>
+              ))}
+            </div>
+          )}
+          {tab === 'reader' && hasReader && readerDigestList.length > 0 && (
+            <div className="ml-auto flex items-center gap-2 py-2">
+              <button onClick={() => setReaderHistoryOpen(o => !o)}
+                className="text-xs px-3 py-1.5 rounded-lg border font-medium transition-all"
+                style={readerHistoryOpen
+                  ? { backgroundColor: '#2563EB', borderColor: '#2563EB', color: '#fff' }
+                  : { backgroundColor: 'transparent', borderColor: '#222', color: '#666' }}>
+                History
+              </button>
+            </div>
+          )}
+        </div>
+        {(generating || genError || sendStatus === 'error') && (
+          <div className="max-w-3xl mx-auto pb-2">
+            {generating && <p className="text-xs text-zinc-500">Claude is reading the markets — takes 15–30 seconds</p>}
+            {genError && <p className="text-xs text-red-400">{genError}</p>}
+            {sendStatus === 'error' && <p className="text-xs text-red-400">Email failed: {sendError}</p>}
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
       <div className="max-w-3xl mx-auto px-5">
 
         {/* ── READER TAB ── */}
@@ -242,11 +247,9 @@ export default function DigestPageClient({
             <p className="text-zinc-400 text-sm leading-relaxed max-w-sm mx-auto mb-8">
               Connect your FT, Economist, or Bloomberg RSS feeds. Finbrief reads every article and sends you only what's relevant to your interests — with summaries.
             </p>
-            <Link
-              href="/onboarding?product=reader&add=true"
+            <Link href="/onboarding?product=reader&add=true"
               className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-white font-bold text-sm transition-opacity hover:opacity-85"
-              style={{ backgroundColor: '#2563EB' }}
-            >
+              style={{ backgroundColor: '#2563EB' }}>
               Set up Reader →
             </Link>
           </div>
@@ -254,25 +257,21 @@ export default function DigestPageClient({
 
         {tab === 'reader' && hasReader && (
           <div className="py-8">
-
-            {/* Reader history panel */}
             {readerHistoryOpen && readerDigestList.length > 0 && (
               <div className="mb-6 rounded-2xl border overflow-hidden" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
                 <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: '#1A1A1A' }}>
                   <h3 className="text-sm font-bold text-white">Reader history</h3>
-                  <button onClick={() => setReaderHistoryOpen(false)} className="text-xs text-zinc-500 hover:text-white transition-colors">Close</button>
+                  <button onClick={() => setReaderHistoryOpen(false)} className="text-xs text-zinc-500 hover:text-white">Close</button>
                 </div>
                 <div className="divide-y max-h-64 overflow-y-auto" style={{ borderColor: '#1A1A1A' }}>
                   {readerDigestList.map(d => {
                     const isActive = d.id === selectedReaderId
                     const rc = d.content as unknown as ReaderContent
                     return (
-                      <button
-                        key={d.id}
+                      <button key={d.id}
                         onClick={() => { setSelectedReaderId(d.id); setReaderHistoryOpen(false) }}
-                        className="w-full flex items-center justify-between px-5 py-3 text-left transition-colors hover:bg-white/5"
-                        style={isActive ? { backgroundColor: 'rgba(37,99,235,0.08)' } : {}}
-                      >
+                        className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-white/5"
+                        style={isActive ? { backgroundColor: 'rgba(37,99,235,0.08)' } : {}}>
                         <div className="flex items-center gap-3">
                           <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold shrink-0"
                             style={{ backgroundColor: 'rgba(37,99,235,0.15)', color: '#2563EB' }}>
@@ -291,48 +290,29 @@ export default function DigestPageClient({
               </div>
             )}
 
-            {/* Generate controls */}
             <div className="rounded-2xl border p-5 mb-6" style={{ backgroundColor: '#111', borderColor: '#1A1A1A' }}>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={() => generateReader()}
-                  disabled={generatingReader}
-                  className="flex-1 py-3 rounded-xl text-white font-bold text-sm transition-opacity hover:opacity-85 disabled:opacity-50"
-                  style={{ backgroundColor: '#2563EB' }}
-                >
-                  {generatingReader ? 'Reading your feeds...' : 'Generate today\'s Reader brief'}
-                </button>
-              </div>
-
-              {/* Custom topic */}
+              <button onClick={() => generateReader()} disabled={generatingReader}
+                className="w-full py-3 rounded-xl text-white font-bold text-sm transition-opacity hover:opacity-85 disabled:opacity-50"
+                style={{ backgroundColor: '#2563EB' }}>
+                {generatingReader ? 'Reading your feeds…' : "Generate today's Reader brief"}
+              </button>
               <div className="mt-3 flex gap-2">
-                <input
-                  value={customTopic}
-                  onChange={e => setCustomTopic(e.target.value)}
+                <input value={customTopic} onChange={e => setCustomTopic(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && customTopic.trim() && generateReader(customTopic.trim())}
-                  placeholder='Brief me on a topic, e.g. "oil markets"'
+                  placeholder='Brief me on a specific topic, e.g. "oil markets"'
                   className="flex-1 text-sm px-4 py-2.5 rounded-xl border outline-none bg-transparent text-white placeholder-zinc-600 focus:border-zinc-500 transition-colors"
-                  style={{ borderColor: '#222' }}
-                />
-                <button
-                  onClick={() => customTopic.trim() && generateReader(customTopic.trim())}
+                  style={{ borderColor: '#222' }} />
+                <button onClick={() => customTopic.trim() && generateReader(customTopic.trim())}
                   disabled={generatingReader || !customTopic.trim()}
-                  className="px-4 py-2.5 rounded-xl text-white font-semibold text-sm transition-opacity hover:opacity-80 disabled:opacity-40"
-                  style={{ backgroundColor: '#333' }}
-                >
+                  className="px-4 py-2.5 rounded-xl text-white font-semibold text-sm disabled:opacity-40"
+                  style={{ backgroundColor: '#333' }}>
                   Go
                 </button>
               </div>
-
-              {generatingReader && (
-                <p className="text-xs text-zinc-500 mt-3 text-center">Claude is scanning your feeds — takes 15–30 seconds</p>
-              )}
-              {readerGenError && (
-                <p className="text-xs text-red-400 mt-3 text-center">{readerGenError}</p>
-              )}
+              {generatingReader && <p className="text-xs text-zinc-500 mt-3 text-center">Claude is scanning your feeds — takes 15–30 seconds</p>}
+              {readerGenError && <p className="text-xs text-red-400 mt-3 text-center">{readerGenError}</p>}
             </div>
 
-            {/* Current Reader brief */}
             {readerContent ? (
               <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: '#111', borderColor: '#1A1A1A' }}>
                 <div className="px-6 py-5 border-b" style={{ borderColor: '#1A1A1A' }}>
@@ -356,27 +336,20 @@ export default function DigestPageClient({
                   <h2 className="text-xl font-extrabold text-white tracking-tight mb-2">{readerContent.headline}</h2>
                   <p className="text-sm text-zinc-400 leading-relaxed">{readerContent.opening}</p>
                 </div>
-
                 <div className="divide-y" style={{ borderColor: '#1A1A1A' }}>
                   {(readerContent.articles ?? []).map((article, i) => (
                     <div key={i} className="px-6 py-5">
-                      <div className="flex items-start justify-between gap-3 mb-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-semibold text-zinc-500">{article.source}</span>
-                          {article.tag && (
-                            <span className="text-xs px-2 py-0.5 rounded-md font-medium"
-                              style={{ backgroundColor: '#1A1A1A', color: '#888' }}>
-                              {article.tag}
-                            </span>
-                          )}
-                        </div>
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span className="text-xs font-semibold text-zinc-500">{article.source}</span>
+                        {article.tag && (
+                          <span className="text-xs px-2 py-0.5 rounded-md font-medium"
+                            style={{ backgroundColor: '#1A1A1A', color: '#888' }}>
+                            {article.tag}
+                          </span>
+                        )}
                       </div>
-                      <a
-                        href={article.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-base font-bold text-white leading-snug hover:underline block mb-2"
-                      >
+                      <a href={article.url} target="_blank" rel="noopener noreferrer"
+                        className="text-base font-bold text-white leading-snug hover:underline block mb-2">
                         {article.title}
                       </a>
                       <p className="text-sm text-zinc-400 leading-relaxed">{article.summary}</p>
@@ -384,13 +357,11 @@ export default function DigestPageClient({
                   ))}
                 </div>
               </div>
-            ) : (
-              !generatingReader && (
-                <div className="rounded-2xl border px-6 py-12 text-center" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
-                  <p className="text-zinc-500 text-sm mb-1">No briefs yet.</p>
-                  <p className="text-zinc-600 text-xs">Hit "Generate today's Reader brief" above to get started.</p>
-                </div>
-              )
+            ) : !generatingReader && (
+              <div className="rounded-2xl border px-6 py-12 text-center" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
+                <p className="text-zinc-500 text-sm mb-1">No briefs yet.</p>
+                <p className="text-zinc-600 text-xs">Hit the button above to generate your first Reader brief.</p>
+              </div>
             )}
           </div>
         )}
@@ -400,21 +371,20 @@ export default function DigestPageClient({
           <div className="my-4 rounded-2xl border overflow-hidden" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
             <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: '#1A1A1A' }}>
               <h3 className="text-sm font-bold text-white">Digest history</h3>
-              <button onClick={() => setHistoryOpen(false)} className="text-xs text-zinc-500 hover:text-white transition-colors">Close</button>
+              <button onClick={() => setHistoryOpen(false)} className="text-xs text-zinc-500 hover:text-white">Close</button>
             </div>
             <div className="divide-y max-h-64 overflow-y-auto" style={{ borderColor: '#1A1A1A' }}>
               {digests.map(d => {
                 const isActive = d.id === selectedId
                 const col = TYPE_COLORS[d.digest_type] ?? '#888'
                 return (
-                  <button
-                    key={d.id}
+                  <button key={d.id}
                     onClick={() => { setSelectedId(d.id); setHistoryOpen(false) }}
-                    className="w-full flex items-center justify-between px-5 py-3 text-left transition-colors hover:bg-white/5"
-                    style={isActive ? { backgroundColor: 'rgba(29,158,117,0.08)' } : {}}
-                  >
+                    className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-white/5"
+                    style={isActive ? { backgroundColor: 'rgba(29,158,117,0.08)' } : {}}>
                     <div className="flex items-center gap-3">
-                      <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold shrink-0" style={{ backgroundColor: col + '22', color: col }}>
+                      <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold shrink-0"
+                        style={{ backgroundColor: col + '22', color: col }}>
                         {TYPE_LABELS[d.digest_type] ?? d.digest_type}
                       </span>
                       <div>
@@ -432,25 +402,9 @@ export default function DigestPageClient({
 
         {tab === 'digest' && !selected && (
           <div className="py-24 text-center">
-            <div className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center" style={{ backgroundColor: '#111', border: '1px solid #1A1A1A' }}>
-              <div className="w-6 h-6 rounded-full" style={{ backgroundColor: '#1D9E75' }} />
-            </div>
             <h2 className="text-2xl font-extrabold text-white mb-2 tracking-tight">No digest yet</h2>
-            <p className="text-zinc-400 mb-8 text-sm">Generate your first digest to see personalised market insights.</p>
-            <div className="flex flex-col sm:flex-row justify-center gap-3">
-              {(['pre', 'eod', 'weekly'] as const).map(type => (
-                <button
-                  key={type}
-                  onClick={() => generate(type)}
-                  disabled={!!generating}
-                  className="px-6 py-3.5 rounded-xl text-white font-bold text-sm disabled:opacity-50 transition-opacity hover:opacity-85"
-                  style={{ backgroundColor: TYPE_COLORS[type] }}
-                >
-                  {generating === type ? 'Generating...' : `${TYPE_LABELS[type]} brief`}
-                </button>
-              ))}
-            </div>
-            {generating && <p className="text-xs text-zinc-500 mt-4">Takes 15–30 seconds</p>}
+            <p className="text-zinc-500 mb-8 text-sm">Generate your first brief using the buttons above.</p>
+            {generating && <p className="text-xs text-zinc-500 mt-4">Takes 15–30 seconds…</p>}
             {genError && <p className="text-sm text-red-400 mt-3">{genError}</p>}
           </div>
         )}

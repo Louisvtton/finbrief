@@ -76,7 +76,6 @@ export default function LoginClient({ product = 'digest' }: { product?: string }
         const { data, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
         if (data.session) {
-          // Check if onboarding is complete
           const { data: profile } = await supabase
             .from('profiles')
             .select('name, products')
@@ -86,8 +85,12 @@ export default function LoginClient({ product = 'digest' }: { product?: string }
           router.refresh()
           if (!profile?.name) {
             router.push(`/onboarding?product=${product}`)
+          } else if (product === 'reader') {
+            const hasReader = profile.products === 'reader' || profile.products === 'both'
+            router.push(hasReader ? '/digest?tab=reader' : `/onboarding?product=reader&add=true`)
           } else {
-            router.push(profile.products === 'reader' ? '/reader' : '/digest')
+            const hasDigest = profile.products === 'digest' || profile.products === 'both'
+            router.push(hasDigest ? '/digest' : '/digest?tab=reader')
           }
         }
       }
