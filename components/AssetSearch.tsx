@@ -4,11 +4,11 @@ import { useState, useEffect, useRef } from 'react'
 import type { AssetType, WatchlistItem } from '@/types'
 
 const TYPE_COLORS: Record<string, { border: string; bg: string }> = {
-  stock:     { border: '#534AB7', bg: '#EEEDFE' },
-  etf:       { border: '#3B6D11', bg: '#EAF3DE' },
-  crypto:    { border: '#854F0B', bg: '#FAEEDA' },
-  commodity: { border: '#993C1D', bg: '#FAECE7' },
-  forex:     { border: '#993556', bg: '#FBEAF0' },
+  stock:     { border: '#534AB7', bg: '#534AB722' },
+  etf:       { border: '#3B6D11', bg: '#3B6D1122' },
+  crypto:    { border: '#C47A1E', bg: '#C47A1E22' },
+  commodity: { border: '#993C1D', bg: '#993C1D22' },
+  forex:     { border: '#993556', bg: '#99355622' },
 }
 
 interface SearchResult {
@@ -124,7 +124,7 @@ export default function AssetSearch({
 
       {/* Search input */}
       <div className="relative">
-        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400">
+        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none" style={{ color: '#555' }}>
           {searching
             ? <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
             : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -135,13 +135,14 @@ export default function AssetSearch({
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Search any stock, ETF, crypto, forex… (e.g. Apple, TSLA, BTC)"
-          className="w-full border border-zinc-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40"
+          className="w-full rounded-xl pl-10 pr-4 py-3 text-sm outline-none text-white placeholder-zinc-600 bg-transparent border focus:border-zinc-500 transition-colors"
+          style={{ borderColor: '#222' }}
         />
       </div>
 
       {/* Results dropdown */}
       {results.length > 0 && (
-        <div className="border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
+        <div className="rounded-xl overflow-hidden border" style={{ borderColor: '#222' }}>
           {results.map(r => {
             const style = TYPE_COLORS[r.assetType] ?? TYPE_COLORS.stock
             const isAdding = adding === r.ticker
@@ -150,7 +151,8 @@ export default function AssetSearch({
                 key={r.ticker}
                 onClick={() => add(r)}
                 disabled={!!adding}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-zinc-50 text-left border-b border-zinc-100 last:border-0 disabled:opacity-60 transition-colors"
+                className="w-full flex items-center justify-between px-4 py-3 text-left border-b last:border-0 disabled:opacity-60 transition-colors hover:bg-white/5"
+                style={{ borderColor: '#222', backgroundColor: '#111' }}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <span
@@ -159,13 +161,13 @@ export default function AssetSearch({
                   >
                     {r.ticker}
                   </span>
-                  <span className="text-sm text-gray-700 truncate">{r.name}</span>
+                  <span className="text-sm text-zinc-300 truncate">{r.name}</span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 ml-2">
-                  <span className="text-xs text-gray-400 capitalize">{r.assetType}</span>
+                  <span className="text-xs text-zinc-500 capitalize">{r.assetType}</span>
                   <span
                     className="text-xs px-2 py-1 rounded-lg text-white font-medium"
-                    style={{ backgroundColor: isAdding ? '#9ca3af' : '#1D9E75' }}
+                    style={{ backgroundColor: isAdding ? '#444' : '#1D9E75' }}
                   >
                     {isAdding ? '…' : '+ Add'}
                   </span>
@@ -177,12 +179,12 @@ export default function AssetSearch({
       )}
 
       {query && !searching && results.length === 0 && (
-        <p className="text-sm text-gray-400 text-center py-2">No results for "{query}" — try a ticker symbol like AAPL or BARC.L</p>
+        <p className="text-sm text-zinc-500 text-center py-2">No results for "{query}" — try a ticker symbol like AAPL or BARC.L</p>
       )}
 
-      {error && <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+      {error && <p className="text-xs rounded-lg px-3 py-2" style={{ color: '#e53e3e', backgroundColor: '#e53e3e11' }}>{error}</p>}
 
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-zinc-600">
         Searches across NYSE, NASDAQ, LSE, crypto, ETFs, forex and more via Finnhub.
       </p>
     </div>

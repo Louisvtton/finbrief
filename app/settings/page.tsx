@@ -20,33 +20,23 @@ export default async function SettingsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, { data: watchlist }, { data: industries }] = await Promise.all([
+  const [{ data: profile }, { data: watchlist }, { data: industries }, { data: rssFeeds }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('watchlist_items').select('*').eq('user_id', user.id).order('created_at'),
     supabase.from('followed_industries').select('*').eq('user_id', user.id).order('created_at'),
+    supabase.from('rss_feeds').select('*').eq('user_id', user.id).order('created_at'),
   ])
 
   return (
-    <main className="min-h-screen bg-zinc-50">
-      <nav className="bg-white border-b border-zinc-200 px-4 py-3">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <a href="/digest" className="font-bold text-lg" style={{ color: '#1D9E75' }}>finbrief</a>
-          <a
-            href="/digest"
-            className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg border border-zinc-200 text-gray-600 hover:bg-zinc-50 transition-colors"
-          >
-            ← Back to my digest
-          </a>
-        </div>
-      </nav>
-      <SettingsClient
-        userId={user.id}
-        profile={profile}
-        initialWatchlist={(watchlist ?? []).map((w: any) => ({
-          id: w.id, ticker: w.ticker, name: w.name, assetType: w.asset_type,
-        }))}
-        initialIndustries={(industries ?? []).map((i: any) => i.label)}
-      />
-    </main>
+    <SettingsClient
+      userId={user.id}
+      profile={profile}
+      products={profile?.products ?? 'digest'}
+      initialWatchlist={(watchlist ?? []).map((w: any) => ({
+        id: w.id, ticker: w.ticker, name: w.name, assetType: w.asset_type,
+      }))}
+      initialIndustries={(industries ?? []).map((i: any) => i.label)}
+      initialRssFeeds={(rssFeeds ?? []).map((f: any) => ({ id: f.id, label: f.label, url: f.url }))}
+    />
   )
 }

@@ -208,6 +208,11 @@ export default function DigestPageClient({
               </button>
             ))}
             <Link href="/settings"
+              className="text-xs px-3 py-1.5 rounded-lg font-medium border transition-colors hover:border-zinc-500"
+              style={{ borderColor: '#222', color: '#888', backgroundColor: '#111' }}>
+              Settings
+            </Link>
+            <Link href="/settings"
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white transition-opacity hover:opacity-80"
               style={{ backgroundColor: '#1D9E75' }}>
               {userName ? userName[0].toUpperCase() : 'U'}
