@@ -35,7 +35,7 @@ export default async function DigestPage() {
     .limit(50)
 
   const toRow = (d: any) => ({ id: d.id, digest_type: d.digest_type, created_at: d.created_at, content: d.content as DigestContent })
-  const READER_TYPES = new Set(['reader', 'reader_custom'])
+  const READER_TYPES = new Set(['reader', 'reader_custom', 'reader_weekly'])
   const digests = (allRows ?? []).filter(d => !READER_TYPES.has(d.digest_type)).map(toRow)
   const readerDigests = (allRows ?? []).filter(d => READER_TYPES.has(d.digest_type)).map(toRow)
 

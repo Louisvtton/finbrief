@@ -6,7 +6,7 @@ import { fetchRssFeed } from './rss-parser'
 import { getYahooQuote, toYahooTicker } from './yahoo-finance'
 import type { DigestContent, WatchlistItem } from '@/types'
 
-export async function generateDigest(userId: string, digestType: 'pre' | 'eod' | 'weekly'): Promise<DigestContent> {
+export async function generateDigest(userId: string, digestType: 'pre' | 'eod' | 'weekly', extraNotes?: string): Promise<DigestContent> {
   const supabase = createServiceClient()
 
   // Fetch user profile
@@ -277,7 +277,12 @@ INDUSTRY NEWS:
 ${JSON.stringify(industryNews, null, 2)}${rssArticles.length > 0 ? `
 
 PREMIUM RSS ARTICLES (from user's own subscriptions — treat as high-priority, trusted sources):
-${JSON.stringify(rssArticles, null, 2)}` : ''}`
+${JSON.stringify(rssArticles, null, 2)}` : ''}${extraNotes ? `
+
+USER'S ADDITIONAL FOCUS FOR THIS BRIEF:
+${extraNotes}
+
+Please give extra attention to the above when writing insights and the summary.` : ''}`
 
   return generateDigestWithClaude(systemPrompt, userPrompt)
 }

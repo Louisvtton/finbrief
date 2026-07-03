@@ -9,7 +9,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, customTopic } = await req.json()
+    const { userId, customTopic, briefType = 'daily' } = await req.json()
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
 
     const supabase = createServiceClient()
@@ -31,9 +31,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No RSS feeds connected. Add subscriptions in Settings.' }, { status: 400 })
     }
 
+    // Weekly brief fetches more articles (7 days via higher limit)
+    const maxItems = briefType === 'weekly' ? 20 : 10
+
     // Fetch articles from all feeds in parallel
     const articlesByFeed = await Promise.allSettled(
-      feeds.map(f => fetchRssFeed(f.url, f.label, 10))
+      feeds.map(f => fetchRssFeed(f.url, f.label, maxItems))
     )
 
     const allArticles = articlesByFeed
@@ -56,6 +59,7 @@ export async function POST(req: NextRequest) {
       `[${i + 1}] Source: ${a.source}\nHeadline: ${a.headline}\nSummary: ${a.summary || 'No summary available'}`
     ).join('\n\n')
 
+    const isWeekly = briefType === 'weekly'
     const prompt = `You are a financial analyst writing a personalised reading digest.
 
 ${topicsContext}
@@ -66,14 +70,16 @@ Here are the latest articles from the user's subscriptions:
 ${articleList}
 
 Your task:
-1. Select 3-6 articles that are most relevant to the user's interests${customTopic ? ` and the topic "${customTopic}"` : ''}
+1. Select ${isWeekly ? '6-10' : '3-6'} articles that are most relevant to the user's interests${customTopic ? ` and the topic "${customTopic}"` : ''}
 2. For each selected article, write a 2-3 sentence summary explaining what it says and why it matters to this user
-3. Write a short opening paragraph (2-3 sentences) summarising today's key themes
+3. Write a short opening paragraph (${isWeekly ? '3-4' : '2-3'} sentences) summarising ${isWeekly ? "the week's key themes" : "today's key themes"}
+
+${isWeekly ? 'This is a WEEKLY roundup — look for the week\'s biggest stories and patterns across publications. Connect themes across articles. Be more analytical and forward-looking.' : ''}
 
 Return valid JSON only, no markdown fences:
 {
-  "headline": "short title for this brief (e.g. 'Your morning read' or 'Oil markets brief')",
-  "opening": "2-3 sentence narrative overview of today's themes",
+  "headline": "short title for this brief (e.g. '${isWeekly ? 'Your weekly read' : 'Your morning read'}' or 'Oil markets brief')",
+  "opening": "${isWeekly ? '3-4' : '2-3'} sentence narrative overview of ${isWeekly ? "the week's themes" : "today's themes"}",
   "articles": [
     {
       "source": "publication name",
@@ -101,7 +107,7 @@ Return valid JSON only, no markdown fences:
       return NextResponse.json({ error: 'Failed to parse Claude response' }, { status: 500 })
     }
 
-    const digestType = customTopic ? 'reader_custom' : 'reader'
+    const digestType = customTopic ? 'reader_custom' : briefType === 'weekly' ? 'reader_weekly' : 'reader'
 
     const { data, error } = await supabase
       .from('digests')

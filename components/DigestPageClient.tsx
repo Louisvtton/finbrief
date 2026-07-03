@@ -26,8 +26,88 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 }
 
+const DIGEST_TYPES = ['pre', 'eod', 'weekly'] as const
+type DigestType = typeof DIGEST_TYPES[number]
 const TYPE_LABELS: Record<string, string> = { pre: 'Pre-market', eod: 'End of day', weekly: 'Weekly' }
 const TYPE_COLORS: Record<string, string> = { pre: '#1D9E75', eod: '#2563EB', weekly: '#7C3AED' }
+
+type ReaderTab = 'daily' | 'weekly'
+
+// ── Shared history list ──────────────────────────────────────────
+function HistoryPanel({
+  items, selectedId, onSelect, color,
+  labelFn,
+}: {
+  items: DigestRow[]
+  selectedId: string
+  onSelect: (id: string) => void
+  color: string
+  labelFn?: (d: DigestRow) => string
+}) {
+  if (items.length === 0) return null
+  return (
+    <div className="rounded-2xl border overflow-hidden mb-5" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
+      <p className="px-5 py-3 text-xs font-bold uppercase tracking-widest border-b" style={{ borderColor: '#1A1A1A', color: '#444' }}>Past briefs</p>
+      <div className="divide-y max-h-52 overflow-y-auto" style={{ borderColor: '#1A1A1A' }}>
+        {items.map(d => {
+          const isActive = d.id === selectedId
+          const label = labelFn ? labelFn(d) : (d.content as any)?.headline || formatDate(d.created_at)
+          return (
+            <button key={d.id}
+              onClick={() => onSelect(d.id)}
+              className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-white/5 transition-colors"
+              style={isActive ? { backgroundColor: color + '10' } : {}}>
+              <div>
+                <p className="text-sm font-medium text-white line-clamp-1">{label}</p>
+                <p className="text-xs text-zinc-500">{formatDate(d.created_at)} · {formatTime(d.created_at)}</p>
+              </div>
+              {isActive && <span className="text-xs font-semibold shrink-0 ml-3" style={{ color }}> Viewing</span>}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── Generate card ────────────────────────────────────────────────
+function GenerateCard({
+  color, placeholder, buttonLabel, loading, loadingLabel, error,
+  notes, onNotesChange, onGenerate,
+  extraRow,
+}: {
+  color: string
+  placeholder: string
+  buttonLabel: string
+  loading: boolean
+  loadingLabel: string
+  error: string
+  notes: string
+  onNotesChange: (v: string) => void
+  onGenerate: () => void
+  extraRow?: React.ReactNode
+}) {
+  return (
+    <div className="rounded-2xl border p-5 mb-5" style={{ backgroundColor: '#111', borderColor: '#1A1A1A' }}>
+      <textarea
+        value={notes}
+        onChange={e => onNotesChange(e.target.value)}
+        placeholder={placeholder}
+        rows={2}
+        className="w-full text-sm px-4 py-3 rounded-xl border outline-none bg-transparent text-white placeholder-zinc-600 focus:border-zinc-600 transition-colors resize-none mb-3"
+        style={{ borderColor: '#222' }}
+      />
+      {extraRow}
+      <button onClick={onGenerate} disabled={loading}
+        className="w-full py-3 rounded-xl text-white font-bold text-sm transition-opacity hover:opacity-85 disabled:opacity-50"
+        style={{ backgroundColor: color }}>
+        {loading ? loadingLabel : buttonLabel}
+      </button>
+      {loading && <p className="text-xs text-zinc-500 mt-2 text-center">Claude is working — takes 15–30 seconds</p>}
+      {error && <p className="text-xs text-red-400 mt-2 text-center">{error}</p>}
+    </div>
+  )
+}
 
 export default function DigestPageClient({
   userId, digests, readerDigests = [], products = 'digest', userName = ''
@@ -41,66 +121,88 @@ export default function DigestPageClient({
   const hasReader = products === 'reader' || products === 'both'
   const hasDigest = products === 'digest' || products === 'both'
   const initialTab = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'reader' ? 'reader' : hasDigest ? 'digest' : 'reader'
+
+  // Main tabs
   const [tab, setTab] = useState<'digest' | 'reader'>(initialTab)
 
-  // Digest state
-  const [selectedId, setSelectedId] = useState<string>(digests[0]?.id ?? '')
-  const [historyOpen, setHistoryOpen] = useState(false)
-  const [generating, setGenerating] = useState<'pre' | 'eod' | 'weekly' | null>(null)
+  // Digest sub-tabs
+  const [digestType, setDigestType] = useState<DigestType>('pre')
+  const [digestRows, setDigestRows] = useState<DigestRow[]>(digests)
+  const [selectedIds, setSelectedIds] = useState<Record<DigestType, string>>({
+    pre: digests.find(d => d.digest_type === 'pre')?.id ?? '',
+    eod: digests.find(d => d.digest_type === 'eod')?.id ?? '',
+    weekly: digests.find(d => d.digest_type === 'weekly')?.id ?? '',
+  })
+  const [digestNotes, setDigestNotes] = useState('')
+  const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState('')
   const [sending, setSending] = useState(false)
   const [sendStatus, setSendStatus] = useState<'idle' | 'sent' | 'error'>('idle')
   const [sendError, setSendError] = useState('')
 
-  // Reader state
-  const [readerDigestList, setReaderDigestList] = useState<DigestRow[]>(readerDigests)
-  const [selectedReaderId, setSelectedReaderId] = useState<string>(readerDigests[0]?.id ?? '')
-  const [readerHistoryOpen, setReaderHistoryOpen] = useState(false)
+  // Reader sub-tabs
+  const [readerTab, setReaderTab] = useState<ReaderTab>('daily')
+  const [readerRows, setReaderRows] = useState<DigestRow[]>(readerDigests)
+  const [selectedReaderIds, setSelectedReaderIds] = useState<Record<ReaderTab, string>>({
+    daily: readerDigests.find(d => ['reader', 'reader_custom'].includes(d.digest_type))?.id ?? '',
+    weekly: readerDigests.find(d => d.digest_type === 'reader_weekly')?.id ?? '',
+  })
+  const [customTopic, setCustomTopic] = useState('')
   const [generatingReader, setGeneratingReader] = useState(false)
   const [readerGenError, setReaderGenError] = useState('')
-  const [customTopic, setCustomTopic] = useState('')
 
-  const selected = digests.find(d => d.id === selectedId) ?? digests[0]
-  const selectedReader = readerDigestList.find(d => d.id === selectedReaderId) ?? readerDigestList[0]
+  // Derived
+  const currentDigestType = digestType
+  const typeRows = digestRows.filter(d => d.digest_type === currentDigestType)
+  const selectedDigest = typeRows.find(d => d.id === selectedIds[currentDigestType]) ?? typeRows[0]
+
+  const dailyReaderRows = readerRows.filter(d => ['reader', 'reader_custom'].includes(d.digest_type))
+  const weeklyReaderRows = readerRows.filter(d => d.digest_type === 'reader_weekly')
+  const currentReaderRows = readerTab === 'daily' ? dailyReaderRows : weeklyReaderRows
+  const selectedReader = currentReaderRows.find(d => d.id === selectedReaderIds[readerTab]) ?? currentReaderRows[0]
   const readerContent = selectedReader?.content as unknown as ReaderContent | undefined
 
-  const generate = async (digestType: 'pre' | 'eod' | 'weekly') => {
-    setGenerating(digestType)
+  const generate = async () => {
+    setGenerating(true)
     setGenError('')
     try {
       const res = await fetch('/api/digest/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, digestType }),
+        body: JSON.stringify({ userId, digestType: currentDigestType, extraNotes: digestNotes || undefined }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Generation failed')
-      window.location.href = '/digest'
+      const newRow: DigestRow = { id: data.digestId, digest_type: currentDigestType, created_at: new Date().toISOString(), content: data.content }
+      setDigestRows(prev => [newRow, ...prev])
+      setSelectedIds(prev => ({ ...prev, [currentDigestType]: data.digestId }))
+      setDigestNotes('')
     } catch (err: any) {
       setGenError(err.message)
-      setGenerating(null)
+    } finally {
+      setGenerating(false)
     }
   }
 
-  const generateReader = async (topic?: string) => {
+  const generateReader = async () => {
     setGeneratingReader(true)
     setReaderGenError('')
     try {
       const res = await fetch('/api/reader/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, customTopic: topic || undefined }),
+        body: JSON.stringify({
+          userId,
+          briefType: readerTab,
+          customTopic: readerTab === 'daily' && customTopic.trim() ? customTopic.trim() : undefined,
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Generation failed')
-      const newDigest: DigestRow = {
-        id: data.digestId,
-        digest_type: topic ? 'reader_custom' : 'reader',
-        created_at: new Date().toISOString(),
-        content: data.content,
-      }
-      setReaderDigestList(prev => [newDigest, ...prev])
-      setSelectedReaderId(data.digestId)
+      const dtype = readerTab === 'weekly' ? 'reader_weekly' : (customTopic.trim() ? 'reader_custom' : 'reader')
+      const newRow: DigestRow = { id: data.digestId, digest_type: dtype, created_at: new Date().toISOString(), content: data.content }
+      setReaderRows(prev => [newRow, ...prev])
+      setSelectedReaderIds(prev => ({ ...prev, [readerTab]: data.digestId }))
       setCustomTopic('')
     } catch (err: any) {
       setReaderGenError(err.message)
@@ -110,15 +212,14 @@ export default function DigestPageClient({
   }
 
   const sendEmail = async () => {
-    if (!selected) return
+    if (!selectedDigest) return
     setSending(true)
     setSendStatus('idle')
-    setSendError('')
     try {
       const res = await fetch('/api/digest/send-one', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, digestId: selected.id }),
+        body: JSON.stringify({ userId, digestId: selectedDigest.id }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Failed to send')
@@ -135,7 +236,7 @@ export default function DigestPageClient({
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#0A0A0A', color: '#fff', fontFamily: 'var(--font-jakarta), system-ui, sans-serif' }}>
 
-      {/* Top nav — logo + account only */}
+      {/* Top nav */}
       <nav className="sticky top-0 z-20 border-b px-5 h-14" style={{ backgroundColor: 'rgba(10,10,10,0.97)', backdropFilter: 'blur(12px)', borderColor: '#1A1A1A' }}>
         <div className="max-w-3xl mx-auto h-full flex items-center justify-between">
           <Link href="/" className="flex items-center gap-0.5">
@@ -143,13 +244,11 @@ export default function DigestPageClient({
             <span className="font-extrabold text-lg text-white">brief</span>
           </Link>
           <div className="flex items-center gap-2">
-            <Link href="/settings"
-              className="text-sm font-medium px-3 py-1.5 rounded-lg border transition-colors hover:border-zinc-600 hover:text-white"
+            <Link href="/settings" className="text-sm font-medium px-3 py-1.5 rounded-lg border transition-colors hover:border-zinc-600 hover:text-white"
               style={{ borderColor: '#222', color: '#666' }}>
               Settings
             </Link>
-            <Link href="/settings"
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
+            <Link href="/settings" className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
               style={{ backgroundColor: '#1D9E75' }}>
               {userName ? userName[0].toUpperCase() : 'U'}
             </Link>
@@ -157,95 +256,119 @@ export default function DigestPageClient({
         </div>
       </nav>
 
-      {/* Prominent Digest / Reader tab bar */}
-      <div className="sticky top-14 z-10 border-b px-5" style={{ backgroundColor: 'rgba(10,10,10,0.97)', backdropFilter: 'blur(12px)', borderColor: '#1A1A1A' }}>
-        <div className="max-w-3xl mx-auto flex">
-          <button
-            onClick={() => setTab('digest')}
-            className="relative px-6 py-4 text-sm font-semibold transition-colors"
-            style={tab === 'digest' ? { color: '#1D9E75' } : { color: '#555' }}
-          >
-            Digest
-            {tab === 'digest' && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ backgroundColor: '#1D9E75' }} />
-            )}
-          </button>
-          <button
-            onClick={() => setTab('reader')}
-            className="relative px-6 py-4 text-sm font-semibold transition-colors"
-            style={tab === 'reader' ? { color: '#2563EB' } : { color: '#555' }}
-          >
-            Reader
-            {tab === 'reader' && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ backgroundColor: '#2563EB' }} />
-            )}
-          </button>
-          {/* Right-side actions for digest tab */}
-          {tab === 'digest' && (
-            <div className="ml-auto flex items-center gap-2 py-2">
-              {digests.length > 0 && (
-                <button onClick={() => setHistoryOpen(o => !o)}
-                  className="text-xs px-3 py-1.5 rounded-lg border font-medium transition-all"
-                  style={historyOpen
-                    ? { backgroundColor: '#1D9E75', borderColor: '#1D9E75', color: '#fff' }
-                    : { backgroundColor: 'transparent', borderColor: '#222', color: '#666' }}>
-                  History
-                </button>
+      {/* Digest / Reader main tab bar */}
+      <div className="sticky top-14 z-10 border-b" style={{ backgroundColor: 'rgba(10,10,10,0.97)', backdropFilter: 'blur(12px)', borderColor: '#1A1A1A' }}>
+        <div className="max-w-3xl mx-auto px-5 flex">
+          {(['digest', 'reader'] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className="relative px-6 py-4 text-sm font-semibold transition-colors capitalize"
+              style={tab === t ? { color: t === 'digest' ? '#1D9E75' : '#2563EB' } : { color: '#555' }}>
+              {t.charAt(0).toUpperCase() + t.slice(1)}
+              {tab === t && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+                  style={{ backgroundColor: t === 'digest' ? '#1D9E75' : '#2563EB' }} />
               )}
-              {selected && (
-                <button onClick={sendEmail} disabled={sending || !!generating}
-                  className="text-xs px-3 py-1.5 rounded-lg border font-medium transition-all disabled:opacity-40"
-                  style={sendStatus === 'sent'
-                    ? { backgroundColor: '#1D9E75', borderColor: '#1D9E75', color: '#fff' }
-                    : { backgroundColor: 'transparent', borderColor: '#222', color: '#666' }}>
-                  {sending ? 'Sending…' : sendStatus === 'sent' ? 'Sent' : 'Email me'}
-                </button>
-              )}
-              {(['pre', 'eod', 'weekly'] as const).map(type => (
-                <button key={type} onClick={() => generate(type)} disabled={!!generating}
-                  className="text-xs px-3 py-1.5 rounded-lg font-semibold border transition-all disabled:opacity-40"
-                  style={generating === type
-                    ? { backgroundColor: TYPE_COLORS[type], borderColor: TYPE_COLORS[type], color: '#fff' }
-                    : { backgroundColor: 'transparent', borderColor: TYPE_COLORS[type] + '55', color: TYPE_COLORS[type] }}>
-                  {generating === type ? '...' : TYPE_LABELS[type]}
-                </button>
-              ))}
-            </div>
-          )}
-          {tab === 'reader' && hasReader && readerDigestList.length > 0 && (
-            <div className="ml-auto flex items-center gap-2 py-2">
-              <button onClick={() => setReaderHistoryOpen(o => !o)}
-                className="text-xs px-3 py-1.5 rounded-lg border font-medium transition-all"
-                style={readerHistoryOpen
-                  ? { backgroundColor: '#2563EB', borderColor: '#2563EB', color: '#fff' }
-                  : { backgroundColor: 'transparent', borderColor: '#222', color: '#666' }}>
-                History
-              </button>
-            </div>
-          )}
+            </button>
+          ))}
         </div>
-        {(generating || genError || sendStatus === 'error') && (
-          <div className="max-w-3xl mx-auto pb-2">
-            {generating && <p className="text-xs text-zinc-500">Claude is reading the markets — takes 15–30 seconds</p>}
-            {genError && <p className="text-xs text-red-400">{genError}</p>}
-            {sendStatus === 'error' && <p className="text-xs text-red-400">Email failed: {sendError}</p>}
-          </div>
-        )}
       </div>
 
-      {/* Content */}
-      <div className="max-w-3xl mx-auto px-5">
+      <div className="max-w-3xl mx-auto px-5 py-6">
+
+        {/* ── DIGEST TAB ── */}
+        {tab === 'digest' && !hasDigest && (
+          <div className="py-20 text-center">
+            <p className="text-zinc-400 mb-6">You don't have Digest set up yet.</p>
+            <Link href="/onboarding?product=digest&add=true"
+              className="inline-flex px-8 py-3.5 rounded-xl text-white font-bold text-sm"
+              style={{ backgroundColor: '#1D9E75' }}>
+              Set up Digest →
+            </Link>
+          </div>
+        )}
+
+        {tab === 'digest' && hasDigest && (
+          <>
+            {/* Digest type sub-tabs */}
+            <div className="flex gap-2 mb-6">
+              {DIGEST_TYPES.map(t => {
+                const col = TYPE_COLORS[t]
+                const count = digestRows.filter(d => d.digest_type === t).length
+                return (
+                  <button key={t} onClick={() => setDigestType(t)}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all"
+                    style={digestType === t
+                      ? { backgroundColor: col + '18', borderColor: col, color: col }
+                      : { backgroundColor: '#111', borderColor: '#1A1A1A', color: '#555' }}>
+                    {TYPE_LABELS[t]}
+                    {count > 0 && (
+                      <span className="text-xs px-1.5 py-0.5 rounded-full font-bold"
+                        style={digestType === t
+                          ? { backgroundColor: col + '30', color: col }
+                          : { backgroundColor: '#222', color: '#555' }}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* History */}
+            <HistoryPanel
+              items={typeRows}
+              selectedId={selectedIds[currentDigestType]}
+              onSelect={id => setSelectedIds(prev => ({ ...prev, [currentDigestType]: id }))}
+              color={TYPE_COLORS[currentDigestType]}
+              labelFn={d => `${TYPE_LABELS[d.digest_type]} — ${formatDate(d.created_at)}`}
+            />
+
+            {/* Generate card */}
+            <GenerateCard
+              color={TYPE_COLORS[currentDigestType]}
+              placeholder={`Any extra focus for this ${TYPE_LABELS[currentDigestType].toLowerCase()} brief? (optional) — e.g. "focus on my AstraZeneca position" or "include Fed commentary"`}
+              buttonLabel={`Generate ${TYPE_LABELS[currentDigestType]} brief`}
+              loading={generating}
+              loadingLabel="Generating…"
+              error={genError}
+              notes={digestNotes}
+              onNotesChange={setDigestNotes}
+              onGenerate={generate}
+              extraRow={selectedDigest && (
+                <button onClick={sendEmail} disabled={sending}
+                  className="w-full py-2 rounded-xl text-sm font-medium border mb-3 transition-colors disabled:opacity-40"
+                  style={sendStatus === 'sent'
+                    ? { backgroundColor: '#1D9E75', borderColor: '#1D9E75', color: '#fff' }
+                    : { borderColor: '#222', color: '#666' }}>
+                  {sending ? 'Sending…' : sendStatus === 'sent' ? 'Sent to your inbox' : 'Email me the current brief'}
+                </button>
+              )}
+            />
+            {sendStatus === 'error' && <p className="text-xs text-red-400 mb-3 text-center">{sendError}</p>}
+
+            {/* Brief content */}
+            {selectedDigest ? (
+              <DigestView digest={selectedDigest.content} digestId={selectedDigest.id} userId={userId} />
+            ) : (
+              <div className="py-16 text-center rounded-2xl border" style={{ borderColor: '#1A1A1A' }}>
+                <p className="text-zinc-500 text-sm">No {TYPE_LABELS[currentDigestType].toLowerCase()} briefs yet.</p>
+                <p className="text-zinc-600 text-xs mt-1">Hit the button above to generate your first one.</p>
+              </div>
+            )}
+          </>
+        )}
 
         {/* ── READER TAB ── */}
         {tab === 'reader' && !hasReader && (
           <div className="py-20 text-center">
-            <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-6" style={{ backgroundColor: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.25)' }}>
+            <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-6"
+              style={{ backgroundColor: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.25)' }}>
               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#2563EB' }} />
               <span className="text-xs font-semibold" style={{ color: '#2563EB' }}>Finbrief Reader</span>
             </div>
             <h2 className="text-2xl font-extrabold text-white tracking-tight mb-3">Stop reading everything.</h2>
             <p className="text-zinc-400 text-sm leading-relaxed max-w-sm mx-auto mb-8">
-              Connect your FT, Economist, or Bloomberg RSS feeds. Finbrief reads every article and sends you only what's relevant to your interests — with summaries.
+              Connect your FT, Economist, or Bloomberg RSS feeds. Finbrief reads every article and sends you only what's relevant to your interests.
             </p>
             <Link href="/onboarding?product=reader&add=true"
               className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-white font-bold text-sm transition-opacity hover:opacity-85"
@@ -256,63 +379,56 @@ export default function DigestPageClient({
         )}
 
         {tab === 'reader' && hasReader && (
-          <div className="py-8">
-            {readerHistoryOpen && readerDigestList.length > 0 && (
-              <div className="mb-6 rounded-2xl border overflow-hidden" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
-                <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: '#1A1A1A' }}>
-                  <h3 className="text-sm font-bold text-white">Reader history</h3>
-                  <button onClick={() => setReaderHistoryOpen(false)} className="text-xs text-zinc-500 hover:text-white">Close</button>
-                </div>
-                <div className="divide-y max-h-64 overflow-y-auto" style={{ borderColor: '#1A1A1A' }}>
-                  {readerDigestList.map(d => {
-                    const isActive = d.id === selectedReaderId
-                    const rc = d.content as unknown as ReaderContent
-                    return (
-                      <button key={d.id}
-                        onClick={() => { setSelectedReaderId(d.id); setReaderHistoryOpen(false) }}
-                        className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-white/5"
-                        style={isActive ? { backgroundColor: 'rgba(37,99,235,0.08)' } : {}}>
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold shrink-0"
-                            style={{ backgroundColor: 'rgba(37,99,235,0.15)', color: '#2563EB' }}>
-                            {d.digest_type === 'reader_custom' ? 'Custom' : 'Reader'}
-                          </span>
-                          <div>
-                            <p className="text-sm font-medium text-white">{rc?.headline || formatDate(d.created_at)}</p>
-                            <p className="text-xs text-zinc-500">{formatDate(d.created_at)} · {formatTime(d.created_at)}</p>
-                          </div>
-                        </div>
-                        {isActive && <span className="text-xs font-semibold" style={{ color: '#2563EB' }}>Viewing</span>}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            <div className="rounded-2xl border p-5 mb-6" style={{ backgroundColor: '#111', borderColor: '#1A1A1A' }}>
-              <button onClick={() => generateReader()} disabled={generatingReader}
-                className="w-full py-3 rounded-xl text-white font-bold text-sm transition-opacity hover:opacity-85 disabled:opacity-50"
-                style={{ backgroundColor: '#2563EB' }}>
-                {generatingReader ? 'Reading your feeds…' : "Generate today's Reader brief"}
-              </button>
-              <div className="mt-3 flex gap-2">
-                <input value={customTopic} onChange={e => setCustomTopic(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && customTopic.trim() && generateReader(customTopic.trim())}
-                  placeholder='Brief me on a specific topic, e.g. "oil markets"'
-                  className="flex-1 text-sm px-4 py-2.5 rounded-xl border outline-none bg-transparent text-white placeholder-zinc-600 focus:border-zinc-500 transition-colors"
-                  style={{ borderColor: '#222' }} />
-                <button onClick={() => customTopic.trim() && generateReader(customTopic.trim())}
-                  disabled={generatingReader || !customTopic.trim()}
-                  className="px-4 py-2.5 rounded-xl text-white font-semibold text-sm disabled:opacity-40"
-                  style={{ backgroundColor: '#333' }}>
-                  Go
-                </button>
-              </div>
-              {generatingReader && <p className="text-xs text-zinc-500 mt-3 text-center">Claude is scanning your feeds — takes 15–30 seconds</p>}
-              {readerGenError && <p className="text-xs text-red-400 mt-3 text-center">{readerGenError}</p>}
+          <>
+            {/* Daily / Weekly sub-tabs */}
+            <div className="flex gap-2 mb-6">
+              {(['daily', 'weekly'] as ReaderTab[]).map(rt => {
+                const count = rt === 'daily' ? dailyReaderRows.length : weeklyReaderRows.length
+                return (
+                  <button key={rt} onClick={() => setReaderTab(rt)}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all capitalize"
+                    style={readerTab === rt
+                      ? { backgroundColor: 'rgba(37,99,235,0.12)', borderColor: '#2563EB', color: '#60a5fa' }
+                      : { backgroundColor: '#111', borderColor: '#1A1A1A', color: '#555' }}>
+                    {rt.charAt(0).toUpperCase() + rt.slice(1)}
+                    {count > 0 && (
+                      <span className="text-xs px-1.5 py-0.5 rounded-full font-bold"
+                        style={readerTab === rt
+                          ? { backgroundColor: 'rgba(37,99,235,0.2)', color: '#60a5fa' }
+                          : { backgroundColor: '#222', color: '#555' }}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
             </div>
 
+            {/* Reader history */}
+            <HistoryPanel
+              items={currentReaderRows}
+              selectedId={selectedReaderIds[readerTab]}
+              onSelect={id => setSelectedReaderIds(prev => ({ ...prev, [readerTab]: id }))}
+              color="#2563EB"
+              labelFn={d => (d.content as any)?.headline || formatDate(d.created_at)}
+            />
+
+            {/* Reader generate card */}
+            <GenerateCard
+              color="#2563EB"
+              placeholder={readerTab === 'daily'
+                ? 'Focus on a specific topic? e.g. "oil markets", "Fed policy" (optional)'
+                : 'Any specific focus for this week\'s roundup? (optional)'}
+              buttonLabel={readerTab === 'daily' ? "Generate today's Reader brief" : "Generate weekly Reader roundup"}
+              loading={generatingReader}
+              loadingLabel="Reading your feeds…"
+              error={readerGenError}
+              notes={customTopic}
+              onNotesChange={setCustomTopic}
+              onGenerate={generateReader}
+            />
+
+            {/* Reader brief content */}
             {readerContent ? (
               <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: '#111', borderColor: '#1A1A1A' }}>
                 <div className="px-6 py-5 border-b" style={{ borderColor: '#1A1A1A' }}>
@@ -320,7 +436,7 @@ export default function DigestPageClient({
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold"
                         style={{ backgroundColor: 'rgba(37,99,235,0.15)', color: '#2563EB' }}>
-                        {selectedReader?.digest_type === 'reader_custom' ? 'Custom brief' : 'Reader brief'}
+                        {selectedReader?.digest_type === 'reader_weekly' ? 'Weekly roundup' : selectedReader?.digest_type === 'reader_custom' ? 'Custom brief' : 'Daily brief'}
                       </span>
                       {readerContent.customTopic && (
                         <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold"
@@ -339,7 +455,7 @@ export default function DigestPageClient({
                 <div className="divide-y" style={{ borderColor: '#1A1A1A' }}>
                   {(readerContent.articles ?? []).map((article, i) => (
                     <div key={i} className="px-6 py-5">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <div className="flex items-center gap-2 mb-2">
                         <span className="text-xs font-semibold text-zinc-500">{article.source}</span>
                         {article.tag && (
                           <span className="text-xs px-2 py-0.5 rounded-md font-medium"
@@ -359,58 +475,11 @@ export default function DigestPageClient({
               </div>
             ) : !generatingReader && (
               <div className="rounded-2xl border px-6 py-12 text-center" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
-                <p className="text-zinc-500 text-sm mb-1">No briefs yet.</p>
-                <p className="text-zinc-600 text-xs">Hit the button above to generate your first Reader brief.</p>
+                <p className="text-zinc-500 text-sm mb-1">No {readerTab} briefs yet.</p>
+                <p className="text-zinc-600 text-xs">Hit the button above to generate your first one.</p>
               </div>
             )}
-          </div>
-        )}
-
-        {/* ── DIGEST TAB ── */}
-        {tab === 'digest' && historyOpen && (
-          <div className="my-4 rounded-2xl border overflow-hidden" style={{ borderColor: '#1A1A1A', backgroundColor: '#111' }}>
-            <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: '#1A1A1A' }}>
-              <h3 className="text-sm font-bold text-white">Digest history</h3>
-              <button onClick={() => setHistoryOpen(false)} className="text-xs text-zinc-500 hover:text-white">Close</button>
-            </div>
-            <div className="divide-y max-h-64 overflow-y-auto" style={{ borderColor: '#1A1A1A' }}>
-              {digests.map(d => {
-                const isActive = d.id === selectedId
-                const col = TYPE_COLORS[d.digest_type] ?? '#888'
-                return (
-                  <button key={d.id}
-                    onClick={() => { setSelectedId(d.id); setHistoryOpen(false) }}
-                    className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-white/5"
-                    style={isActive ? { backgroundColor: 'rgba(29,158,117,0.08)' } : {}}>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold shrink-0"
-                        style={{ backgroundColor: col + '22', color: col }}>
-                        {TYPE_LABELS[d.digest_type] ?? d.digest_type}
-                      </span>
-                      <div>
-                        <p className="text-sm font-medium text-white">{formatDate(d.created_at)}</p>
-                        <p className="text-xs text-zinc-500">{formatTime(d.created_at)}</p>
-                      </div>
-                    </div>
-                    {isActive && <span className="text-xs font-semibold" style={{ color: '#1D9E75' }}>Viewing</span>}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {tab === 'digest' && !selected && (
-          <div className="py-24 text-center">
-            <h2 className="text-2xl font-extrabold text-white mb-2 tracking-tight">No digest yet</h2>
-            <p className="text-zinc-500 mb-8 text-sm">Generate your first brief using the buttons above.</p>
-            {generating && <p className="text-xs text-zinc-500 mt-4">Takes 15–30 seconds…</p>}
-            {genError && <p className="text-sm text-red-400 mt-3">{genError}</p>}
-          </div>
-        )}
-
-        {tab === 'digest' && selected && (
-          <DigestView digest={selected.content} digestId={selected.id} userId={userId} />
+          </>
         )}
       </div>
     </div>

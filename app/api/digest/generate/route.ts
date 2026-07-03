@@ -7,14 +7,14 @@ export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, digestType = 'pre' } = await req.json()
+    const { userId, digestType = 'pre', extraNotes } = await req.json()
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
     if (!['pre', 'eod', 'weekly'].includes(digestType)) {
       return NextResponse.json({ error: 'Invalid digestType' }, { status: 400 })
     }
 
     const supabase = createServiceClient()
-    const content = await generateDigest(userId, digestType as 'pre' | 'eod' | 'weekly')
+    const content = await generateDigest(userId, digestType as 'pre' | 'eod' | 'weekly', extraNotes)
 
     const { data, error } = await supabase
       .from('digests')
